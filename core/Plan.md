@@ -353,7 +353,7 @@ Only one server may use a ledger database. On startup core writes a `server_lock
 
 ## 11. Done when
 Status after the Phase 0 build (automated = `./gradlew :core:test`, 57 tests):
-*Real-server smoke test done on Paper 1.21.11 and 26.2 (`./gradlew :core:runServer [-Pmc=26.2]`, with VaultUnlocked 2.20.2): `plugin.yml` `libraries:` load, `api-version: '1.21.11'` is accepted, both Vault interfaces register, `/ce` console commands work, and shutdown is clean. Still open: a real player session (Java and Bedrock/Geyser), legacy Vault-only, real EssentialsX/Jobs, a hard `kill -9`.*
+*Real-server smoke test done on Paper 1.21.11 and 26.2 (`./gradlew :core:runServer [-Pmc=26.2]`, with VaultUnlocked 2.20.2): `plugin.yml` `libraries:` load, `api-version: '1.21.11'` is accepted, both Vault interfaces register, `/ce` console commands work, and shutdown is clean. In-game session confirmed working by the owner (2026-10-12): `/money`, `/pay` with confirmation, starter coins, `/ce` tools. Still open: legacy Vault-only, real EssentialsX/Jobs, a hard `kill -9`, MySQL and Postgres.*
 - [ ] On a fresh Paper server with **Vault**, and separately with **VaultUnlocked**, EssentialsX's `/bal` and a Jobs-style plugin work through CapitalEngine. *(Adapters, attribution and all vault-modes are covered by `VaultTest` under MockBukkit; the real-server run is still to do.)*
 - [x] Every movement is visible in `/ce audit` with the correct plugin. *(`PlayerFlowTest`, `VaultTest` flows by plugin.)*
 - [x] `/money`, `/pay` (with confirmation) and starter coins work. All player text is plain-language. *(`PlayerFlowTest`, `MessagesTest`; still to eyeball on a real client, Java and Bedrock.)*
