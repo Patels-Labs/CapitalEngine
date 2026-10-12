@@ -1,0 +1,31 @@
+# Tag a plugin to release it, for example:  git tag core-v1.0.0 && git push origin core-v1.0.0
+# (API releases use api-v* and have their own workflow.)
+name: Release plugin
+on:
+  push:
+    tags: ["*-v*", "!api-v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Tag must be on main and match the module version
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
+          module="${GITHUB_REF_NAME%%-v*}"; version="${GITHUB_REF_NAME#*-v}"
+          declared=$(grep '^moduleVersion=' "$module/gradle.properties" | cut -d= -f2)
+          [ "$declared" = "$version" ] || { echo "::error::$module/gradle.properties says $declared but the tag says $version"; exit 1; }
+          echo "MODULE=$module" >> "$GITHUB_ENV"; echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew build
+      - name: GitHub Release (private repo) with the jar attached
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          flags=""; case "$VERSION" in *-*) flags="--prerelease";; esac
+          gh release create "$GITHUB_REF_NAME" $flags --generate-notes --title "$MODULE $VERSION" "$MODULE"/build/libs/*.jar

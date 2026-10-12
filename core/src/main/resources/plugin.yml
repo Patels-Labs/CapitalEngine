@@ -1,0 +1,36 @@
+name: CapitalEngine
+main: com.patelheet.capitalengine.core.CapitalEnginePlugin
+version: ${version}
+api-version: '1.21.11'
+description: A modular economy for Paper. One ledger where every coin is tracked.
+author: Heet Patel
+website: https://patelheet.com
+softdepend: [Vault, VaultUnlocked, PlaceholderAPI, floodgate]
+libraries:
+  - com.zaxxer:HikariCP:7.1.0
+  - org.postgresql:postgresql:42.7.14
+
+commands:
+  money:
+    description: See your coins
+    aliases: [bal, balance]
+    usage: /money [player]
+    permission: capitalengine.money
+  pay:
+    description: Give coins to a friend
+    usage: /pay <player> <amount>
+    permission: capitalengine.pay
+  ce:
+    description: CapitalEngine owner tools
+    usage: /ce <audit|reverse|give|take|import|policy|check|reload|prune>
+
+permissions:
+  capitalengine.money: { description: Use /money, default: true }
+  capitalengine.money.others: { description: See other players' balances, default: op }
+  capitalengine.pay: { description: Use /pay, default: true }
+  capitalengine.admin.audit: { description: /ce audit and /ce check, default: op }
+  capitalengine.admin.reverse: { description: /ce reverse, default: op }
+  capitalengine.admin.give: { description: /ce give and /ce take, default: op }
+  capitalengine.admin.import: { description: /ce import, default: op }
+  capitalengine.admin.policy: { description: /ce policy, default: op }
+  capitalengine.admin.reload: { description: /ce reload and /ce prune, default: op }

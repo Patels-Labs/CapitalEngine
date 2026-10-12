@@ -1,0 +1,56 @@
+# CapitalEngine. Amounts are in coins ("1500", "1.5k", "2m"), or "unlimited" for limits.
+
+storage:
+  type: sqlite            # sqlite | mysql | mariadb | postgres
+  file: ledger.db         # sqlite only
+  # host: localhost       # mysql / mariadb / postgres
+  # port: 3306
+  # database: capitalengine
+  # user: ""
+  # password: ""
+  # pool-size: 8
+
+# Names, symbol and decimals are fixed until the server restarts.
+currency:
+  singular: coin
+  plural: coins
+  symbol: "⛁"
+  decimals: 2
+  format: "<amount> <name>"
+
+starter-coins: 250        # given once, to players who join for the very first time
+
+pay:
+  min: 1
+  confirm-above: 1000     # payments at or above this ask "are you sure?" first
+
+clock:                    # the economic day other plugins use for daily and weekly things
+  day-starts-at: "04:00"
+  timezone: server        # or an IANA zone such as Europe/London
+  week-starts-on: MONDAY
+  max-catch-up-days: 7    # days missed while the server was off that still fire (marked as catch-up)
+
+activity:
+  afk-after-minutes: 5
+  dormant-after-days: 60  # players away this long are left out of the "active money" figure (nothing is moved)
+
+# Limits per plugin, enforced no matter what the plugin asks for. Every key is optional.
+#   vault-mode: what a Vault deposit/withdraw with no counterparty means:
+#     issue    = new money is created / destroyed
+#     treasury = paid from / to the Treasury (new money only for any shortfall)
+#     deny     = refused
+# Unknown plugins use `defaults`: they may create money, uncapped, but everything is recorded.
+# Run /ce audit top to see who prints the most, then tighten.
+defaults:
+  vault-mode: issue
+  issue-per-day: unlimited
+  treasury-per-day: unlimited
+
+plugins:
+  CapitalEngine: { issue-per-day: 50000 }                        # starter coins
+  CapitalMarket: { issue-per-day: 20000, treasury-per-day: 50000 }
+  CapitalBank:   { issue-per-day: 30000, treasury-per-day: 20000 }
+  CapitalTrade:  { issue-per-day: 5000 }
+  # Jobs:        { vault-mode: treasury, issue-per-day: 5000 }
+  # VoteRewards: { vault-mode: issue, issue-per-day: 1000 }
+  # SomeOldShop: { vault-mode: deny }

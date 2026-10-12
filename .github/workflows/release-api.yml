@@ -1,0 +1,75 @@
+# Tag the API to publish it:  git tag api-v1.0.0 && git push origin api-v1.0.0
+# The workflow builds, tests, writes the binaries into the PUBLIC repo (patelheet30/capitalengine-api) on a
+# release/api-<version> branch, and that repo opens a PR. Merging that PR is the approval; GitHub Pages then serves it.
+# "Run workflow" with dry_run=true does everything except push.
+name: Release API
+on:
+  push:
+    tags: ["api-v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and stage only, push nothing
+        type: boolean
+        default: true
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PUBLIC_REPO: patelheet30/capitalengine-api
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Must come from main, and the tag must match api/gradle.properties
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::not on main"; exit 1; }
+          declared=$(grep '^moduleVersion=' api/gradle.properties | cut -d= -f2)
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            [ "${GITHUB_REF_NAME#api-v}" = "$declared" ] || { echo "::error::tag says ${GITHUB_REF_NAME#api-v}, api/gradle.properties says $declared"; exit 1; }
+          fi
+          echo "VERSION=$declared" >> "$GITHUB_ENV"
+          echo "DRY=${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and test everything (ApiContractTest guards the contract)
+        run: ./gradlew build
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PUBLIC_REPO }}
+          ssh-key: ${{ secrets.API_REPO_DEPLOY_KEY }}
+          path: site
+      - name: Stage the binaries
+        run: |
+          dir="site/m2/com/patelheet/capitalengine-api/$VERSION"
+          [ ! -e "$dir" ] || { echo "::error::$VERSION is already published. Published versions are immutable: bump the version instead."; exit 1; }
+          ./gradlew :api:publish -PcapitalRepoUrl="file://$PWD/site/m2"
+          mkdir -p "site/docs/$VERSION"
+          cp -r api/build/docs/javadoc/. "site/docs/$VERSION/"
+          rm -rf site/docs/latest && mkdir -p site/docs/latest && cp -r api/build/docs/javadoc/. site/docs/latest/
+      - name: Binaries only, never source
+        run: |
+          bad=$(find site -path site/.git -prune -o -type f \( -name '*.java' -o -name '*.kt' -o -name '*.kts' -o -name '*.sql' -o -name '*.class' \) -print; find site -path site/.git -prune -o -type d -name 'src-html' -print)
+          [ -z "$bad" ] || { echo "::error::source-like files in the public repo:"; echo "$bad"; exit 1; }
+      - name: Push the release branch
+        if: env.DRY != 'true'
+        working-directory: site
+        run: |
+          git config user.name "capitalengine-release-bot"; git config user.email "noreply@patelheet.com"
+          git checkout -b "release/api-$VERSION"
+          git add -A
+          git commit -m "API $VERSION"
+          git push origin "release/api-$VERSION"
+      - name: Dry run summary
+        if: env.DRY == 'true'
+        working-directory: site
+        run: git status --short | head -50
+      - name: Private GitHub Release for the tag
+        if: env.DRY != 'true'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          flags=""; case "$VERSION" in *-*) flags="--prerelease";; esac
+          gh release create "$GITHUB_REF_NAME" $flags --generate-notes --title "API $VERSION" api/build/libs/*.jar

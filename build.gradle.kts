@@ -1,0 +1,16 @@
+plugins { `java-library` }
+
+subprojects {
+    apply(plugin = "java-library")
+    group = "com.patelheet"
+    version = property("moduleVersion")!!   // each module owns its version in <module>/gradle.properties
+    repositories {
+        mavenCentral()
+        maven("https://repo.papermc.io/repository/maven-public/")
+        maven("https://repo.codemc.org/repository/maven-public/")
+        maven("https://repo.extendedclip.com/releases/")
+        maven("https://repo.opencollab.dev/main/")
+    }
+    tasks.withType<JavaCompile> { options.release = 21; options.encoding = "UTF-8" }
+    tasks.withType<Test> { useJUnitPlatform() }
+}

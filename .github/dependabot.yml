@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: gradle
+    directory: /
+    schedule: { interval: weekly }
+    # Paper API, VaultUnlocked and friends are pinned on purpose (lowest supported version): bump by hand.
+    ignore:
+      - dependency-name: "io.papermc.paper:paper-api"
+      - dependency-name: "net.milkbowl.vault:VaultUnlockedAPI"
