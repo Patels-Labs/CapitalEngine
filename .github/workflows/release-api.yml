@@ -21,7 +21,7 @@ jobs:
     env:
       PUBLIC_REPO: patelheet30/capitalengine-api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - name: Must come from main, and the tag must match api/gradle.properties
         run: |
@@ -37,7 +37,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build and test everything (ApiContractTest guards the contract)
         run: ./gradlew build
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: ${{ env.PUBLIC_REPO }}
           ssh-key: ${{ secrets.API_REPO_DEPLOY_KEY }}
