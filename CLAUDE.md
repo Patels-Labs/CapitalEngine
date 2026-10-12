@@ -151,6 +151,14 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 - **Economy-behaviour changes** (autopilot, pricing, budgets, defaults) must keep `./gradlew :sim:test` green. Re-run the relevant sweeps and update `sim/RESULTS.md` when defaults change.
 - **Before calling a phase done,** run its "Done when" checklist in that subproject's `Plan.md`. That includes the real-server smoke test on 1.21.11 and on 26.x, and joining once as a Bedrock player through Geyser.
 
+## Git, CI and releases
+- **Two repos:** `patelheet30/CapitalEngine` (private, all source) and `patelheet30/capitalengine-api` (public, binaries and Javadoc only, served by GitHub Pages as a Maven repo at `https://patelheet30.github.io/capitalengine-api/m2`). Never push source to the public one; its workflows fail on `.java`/`.kt`/`.sql` files.
+- **Work on a branch, open a PR, squash-merge once CI (`build`) is green.** Don't push to `main`. (GitHub's free plan can't enforce this on private repos, so it is a habit. The public repo is enforced.)
+- **Versions** live in one place per module: `<module>/gradle.properties` (`moduleVersion=`). The API jar reports its own version to `CapitalApi.apiVersion()` from that.
+- **Release a plugin:** bump `moduleVersion` in a PR, merge, then `git tag core-v1.0.1 && git push origin core-v1.0.1`. The workflow checks the tag is on `main` and matches the version, builds, and attaches the jar to a private GitHub Release.
+- **Release the API:** same, with an `api-v<version>` tag. The workflow builds, tests, and pushes a `release/api-<version>` branch to the public repo, which opens a PR. Merging that PR publishes the Maven files and Javadoc and creates the public `v<version>` release. Run the "Release API" workflow manually with `dry_run` to rehearse.
+- **Published versions are immutable.** Fix a bad release with a new patch version. Release tags can't be moved or deleted.
+
 ## Licence and confidentiality
 - **Closed source, All Rights Reserved.** © Heet Patel (patelheet.com).
 - **Don't add open-source licence files or headers.** Don't publish source anywhere, and don't push this repo to a public remote.
