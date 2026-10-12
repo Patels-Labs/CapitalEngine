@@ -157,6 +157,7 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 - **Versions** live in one place per module: `<module>/gradle.properties` (`moduleVersion=`). The API jar reports its own version to `CapitalApi.apiVersion()` from that.
 - **Release a plugin:** bump `moduleVersion` in a PR, merge, then `git tag core-v1.0.1 && git push origin core-v1.0.1`. The workflow checks the tag is on `main` and matches the version, builds, and attaches the jar to a private GitHub Release.
 - **Release the API:** same, with an `api-v<version>` tag. The workflow builds, tests, and pushes a `release/api-<version>` branch to the public repo, which opens a PR. Merging that PR publishes the Maven files and Javadoc and creates the public `v<version>` release. Run the "Release API" workflow manually with `dry_run` to rehearse.
+- **No AI attribution on the public repo.** Commits, PR titles and bodies, release notes and files that go to `capitalengine-api` must not contain "Co-Authored-By: Claude", "Generated with Claude Code" or any similar line. (The attribution lines other tooling suggests are fine on the private repo only.)
 - **Published versions are immutable.** Fix a bad release with a new patch version. Release tags can't be moved or deleted.
 
 ## Licence and confidentiality
