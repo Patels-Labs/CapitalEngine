@@ -1,0 +1,19 @@
+# 200 players: players should trade with each other more, and the server's price gap should widen.
+name: big-200
+seed: 7
+days: 90
+players: { miner: 50, farmer: 50, trader: 20, builder: 10, idler: 70 }
+online-chance: { default: 0.6, idler: 0.15 }
+production:
+  miner: { iron_ingot: 48, coal: 64, diamond: 1 }
+  farmer: { wheat: 192, carrot: 128 }
+  builder: { iron_ingot: 32 }
+  idler: { wheat: 32 }
+projects:
+  spawn-railway: { iron_ingot: 8000 }
+# Bands below are a regression envelope around what the defaults do today (see sim/RESULTS.md), not a claim of good economics:
+# the plan's stricter defaults (3pp inflation, 15% monthly growth, 5% unmet) are not met yet by this agent model.
+bands:
+  weekly-inflation-abs-after-warmup: 0.25
+  max-monthly-growth: 3.0
+  max-unmet-needs: 0.30

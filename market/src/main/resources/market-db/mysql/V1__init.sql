@@ -1,0 +1,22 @@
+CREATE TABLE stash (uuid CHAR(36) NOT NULL, item VARCHAR(190) NOT NULL, qty BIGINT NOT NULL, locked BIGINT NOT NULL DEFAULT 0, PRIMARY KEY (uuid, item));
+CREATE TABLE orders (id BIGINT AUTO_INCREMENT PRIMARY KEY, item VARCHAR(190), side VARCHAR(8), owner CHAR(36), unit_price BIGINT, qty BIGINT, filled BIGINT DEFAULT 0, created BIGINT, expires BIGINT, status VARCHAR(12));
+CREATE TABLE trades (id BIGINT AUTO_INCREMENT PRIMARY KEY, item VARCHAR(190), buyer CHAR(36), seller CHAR(36), server_side VARCHAR(8), unit_price BIGINT, qty BIGINT, fee BIGINT, day BIGINT, week BIGINT, order_id BIGINT, order_side VARCHAR(8), ts BIGINT, status VARCHAR(12));
+CREATE TABLE server_stock (item VARCHAR(190) PRIMARY KEY, qty BIGINT NOT NULL);
+CREATE TABLE item_values (item VARCHAR(190) PRIMARY KEY, base BIGINT, last_ref BIGINT, source VARCHAR(12));
+CREATE TABLE day_stats (day BIGINT PRIMARY KEY, treasury_in BIGINT, active_players BIGINT);
+CREATE TABLE policy_state (week BIGINT PRIMARY KEY, rate DOUBLE, savings_budget BIGINT, jobs_budget BIGINT, buyer_budget BIGINT, spread DOUBLE, idx DOUBLE, inflation DOUBLE, new_money BIGINT);
+CREATE TABLE jobs (id BIGINT AUTO_INCREMENT PRIMARY KEY, poster CHAR(36), item VARCHAR(190), qty_total BIGINT, qty_done BIGINT DEFAULT 0, pay_unit BIGINT, project VARCHAR(64), created BIGINT, expires BIGINT, status VARCHAR(12), kind VARCHAR(12) DEFAULT 'DELIVERY', assignee CHAR(36), note VARCHAR(190));
+CREATE TABLE job_deliveries (id BIGINT AUTO_INCREMENT PRIMARY KEY, job_id BIGINT, uuid CHAR(36), qty BIGINT, paid BIGINT, day BIGINT, server INT, status VARCHAR(12));
+CREATE TABLE stalls (world VARCHAR(64) NOT NULL, x INT NOT NULL, y INT NOT NULL, z INT NOT NULL, PRIMARY KEY (world, x, y, z));
+CREATE TABLE tutorial (uuid CHAR(36) PRIMARY KEY, step INT NOT NULL);
+CREATE TABLE flood_stats (who VARCHAR(36) NOT NULL, item VARCHAR(190) NOT NULL, avg DOUBLE, PRIMARY KEY (who, item));
+-- the book is read per item and side in price order; trades are summed by day and week; the rest are status scans
+CREATE INDEX market_orders_book ON orders (item, side, status, unit_price, id);
+CREATE INDEX market_orders_owner ON orders (owner, status);
+CREATE INDEX market_orders_expiry ON orders (status, expires);
+CREATE INDEX market_trades_day ON trades (day, server_side);
+CREATE INDEX market_trades_week ON trades (week, item);
+CREATE INDEX market_trades_status ON trades (status);
+CREATE INDEX market_jobs_status ON jobs (status);
+CREATE INDEX market_jobs_project ON jobs (project, item);
+CREATE INDEX market_deliveries_status ON job_deliveries (status, day);

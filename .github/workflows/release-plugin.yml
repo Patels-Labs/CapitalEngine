@@ -10,7 +10,7 @@ on:
       module:
         description: Module to build
         type: choice
-        options: [core]
+        options: [core, market]
         default: core
       dry_run:
         description: Build only, release nothing

@@ -3,6 +3,11 @@
 > **Artifact:** none shipped (a test-only Gradle module) · **Drives:** [core](../core/Plan.md), [market](../market/Plan.md), [bank](../bank/Plan.md), [trade](../trade/Plan.md)
 > **Parent plan:** [../Plan.md](../Plan.md)
 
+## 0. Build status
+**Built (market only):** `Simulation`, `Scenario`, `Agent` (Miner, Farmer, Trader, Builder, Idler, in one class), `Asserts`, `Report`, `SimMain`, `RESULTS.md`, and the scenarios `tiny-2`, `small-20`, `farm-flood`, `everyone-quits`, `no-bank` and `big-200`. `:sim:test` runs the first three plus determinism, an empty server and a band self-check in about 10 seconds.
+**Differences:** agents also *spend* (a share of spare coins buys what other roles make, then uses it up), because without it nothing recycles through the Treasury; `Agent.Role` is an enum, not a class per role; the month-by-month `with-trade` scenario and the Saver/Borrower roles wait for Bank and Trade; market's expiries use the economic day so a run can cover months; market keeps its own 7-day active-player average from the Day events so a run repeats exactly.
+**Known gap:** a config that breaks the economy could not be found, so the "bands catch it" test uses synthetic data (see `RESULTS.md`).
+
 ## 1. Purpose and scope
 The simulator answers **"does this economy stay sane?"** before real players find out the hard way. It:
 - runs the **real plugins** (core, Market, Bank and optionally Trade) on a **MockBukkit** server, with fake players acting as simple agents
