@@ -28,7 +28,7 @@ tasks.processResources {
 
 // Core is where the API classes live at runtime: add-ons compile against capitalengine-api and find them in this jar.
 tasks.jar {
-    archiveFileName = "CapitalEngine.jar"
+    archiveBaseName = "CapitalEngine"   // CapitalEngine-<version>.jar, ready to upload to Modrinth/CurseForge/Hangar
     from(project(":api").sourceSets.main.get().output)
 }
 

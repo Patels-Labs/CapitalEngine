@@ -1,9 +1,21 @@
 # Tag a plugin to release it, for example:  git tag core-v1.0.0 && git push origin core-v1.0.0
 # (API releases use api-v* and have their own workflow.)
+# "Run workflow" with dry_run=true builds the module and lists the jars it would attach, without releasing anything.
 name: Release plugin
 on:
   push:
     tags: ["*-v*", "!api-v*"]
+  workflow_dispatch:
+    inputs:
+      module:
+        description: Module to build
+        type: choice
+        options: [core]
+        default: core
+      dry_run:
+        description: Build only, release nothing
+        type: boolean
+        default: true
 permissions:
   contents: write
 jobs:
@@ -13,18 +25,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
-      - name: Tag must be on main and match the module version
+      - name: Must be on main and match the module version
         run: |
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
-          module="${GITHUB_REF_NAME%%-v*}"; version="${GITHUB_REF_NAME#*-v}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            module="${GITHUB_REF_NAME%%-v*}"; version="${GITHUB_REF_NAME#*-v}"
+          else
+            module="${{ inputs.module }}"; version=$(grep '^moduleVersion=' "$module/gradle.properties" | cut -d= -f2)
+          fi
           declared=$(grep '^moduleVersion=' "$module/gradle.properties" | cut -d= -f2)
           [ "$declared" = "$version" ] || { echo "::error::$module/gradle.properties says $declared but the tag says $version"; exit 1; }
           echo "MODULE=$module" >> "$GITHUB_ENV"; echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "DRY=${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: 21 }
       - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew build
+      - name: Dry run summary
+        if: env.DRY == 'true'
+        run: ls -la "$MODULE"/build/libs/
       - name: GitHub Release (private repo) with the jar attached
+        if: env.DRY != 'true'
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           flags=""; case "$VERSION" in *-*) flags="--prerelease";; esac
