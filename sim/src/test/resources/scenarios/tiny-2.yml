@@ -1,0 +1,15 @@
+# One miner and one farmer: the server market maker carries the whole market.
+name: tiny-2
+seed: 11
+days: 60
+players: { miner: 1, farmer: 1 }
+online-chance: { default: 0.8 }
+production:
+  miner: { iron_ingot: 24, coal: 32 }
+  farmer: { wheat: 96, carrot: 64 }
+# Bands below are a regression envelope around what the defaults do today (see sim/RESULTS.md), not a claim of good economics:
+# the plan's stricter defaults (3pp inflation, 15% monthly growth, 5% unmet) are not met yet by this agent model.
+bands:
+  weekly-inflation-abs-after-warmup: 0.25
+  max-monthly-growth: 6.0
+  max-unmet-needs: 0.20

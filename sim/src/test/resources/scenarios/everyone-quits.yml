@@ -1,0 +1,17 @@
+# 80% of players stop playing: active money falls and nothing explodes.
+name: everyone-quits
+seed: 3
+days: 90
+players: { miner: 5, farmer: 5, trader: 2, idler: 8 }
+online-chance: { default: 0.6, idler: 0.15 }
+production:
+  miner: { iron_ingot: 48, coal: 64 }
+  farmer: { wheat: 192, carrot: 128 }
+  idler: { wheat: 32 }
+events:
+  - { day: 45, type: go-dormant, share: 0.8 }
+bands:
+  weekly-inflation-abs-after-warmup: 0.30
+  max-monthly-growth: 3.0
+  max-unmet-needs: 0.20
+  min-monthly-growth: -0.60

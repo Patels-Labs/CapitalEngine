@@ -1,0 +1,19 @@
+# Farmers suddenly produce 20 times as much for 10 days: prices fall, stock use-up and "the town needs" jobs absorb it.
+name: farm-flood
+seed: 5
+days: 60
+players: { miner: 4, farmer: 6, trader: 2, idler: 4 }
+online-chance: { default: 0.6, idler: 0.15 }
+production:
+  miner: { iron_ingot: 48, coal: 64 }
+  farmer: { wheat: 192, carrot: 128 }
+  idler: { wheat: 32 }
+events:
+  - { day: 30, type: production-multiplier, role: farmer, x: 20 }
+  - { day: 40, type: production-multiplier, role: farmer, x: 1 }
+# Bands below are a regression envelope around what the defaults do today (see sim/RESULTS.md), not a claim of good economics:
+# the plan's stricter defaults (3pp inflation, 15% monthly growth, 5% unmet) are not met yet by this agent model.
+bands:
+  weekly-inflation-abs-after-warmup: 0.35
+  max-monthly-growth: 3.0
+  max-unmet-needs: 0.25
