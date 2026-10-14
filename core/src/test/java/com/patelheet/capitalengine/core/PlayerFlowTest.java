@@ -16,6 +16,13 @@ import org.mockbukkit.mockbukkit.entity.PlayerMock;
 class PlayerFlowTest extends PluginTestBase {
     long balance(PlayerMock p) { return api.accounts().player(p.getUniqueId()).balance(); }
 
+    /** Waits (up to 5s) for an asynchronous command to land. */
+    void eventually(long expected, PlayerMock p, String why) throws Exception {
+        long end = System.currentTimeMillis() + 5000;
+        while (balance(p) != expected && System.currentTimeMillis() < end) { await(core.ledger().barrier()); Thread.sleep(10); }
+        assertEquals(expected, balance(p), why);
+    }
+
     void settle() throws Exception { await(core.ledger().barrier()); server.getScheduler().performTicks(2); }
 
     @Test void newPlayersGetStarterCoinsExactlyOnce() throws Exception {
@@ -93,8 +100,7 @@ class PlayerFlowTest extends PluginTestBase {
         assertEquals("core.give", history.get(0).type());
         op.performCommand("ce take Sam 5");
         op.performCommand("ce reverse " + giveTx + " oops");
-        settle();
-        assertEquals(24500, balance(sam), "reverse took the 100 back, take removed 5");
+        eventually(24500, sam, "reverse took the 100 back, take removed 5");   // /ce reverse answers asynchronously
         sam.performCommand("ce give Sam 1000000");   // players can't
         settle();
         assertEquals(24500, balance(sam));
