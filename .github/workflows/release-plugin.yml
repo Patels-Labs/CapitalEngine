@@ -22,7 +22,7 @@ jobs:
           echo "MODULE=$module" >> "$GITHUB_ENV"; echo "VERSION=$version" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21 }
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew build
       - name: GitHub Release (private repo) with the jar attached
         env: { GH_TOKEN: "${{ github.token }}" }
