@@ -15,7 +15,7 @@ The project is a **monorepo of separate plugins:**
 The full design is in [Plan.md](Plan.md).
 
 ## Status
-**Phase 0 (`api` + `core`) is built and tested** (`./gradlew build`); its real-server and Bedrock smoke tests are still open (see the "Done when" list in [core/Plan.md](core/Plan.md)). Market, Bank, Dashboard, Trade and `sim` have only their `Plan.md` files so far.
+**Phase 0 (`api` + `core`) is built and tested** (`./gradlew build`); its real-server and Bedrock smoke tests are still open (see the "Done when" list in [core/Plan.md](core/Plan.md)). **Phase 1 (`market`) is built and tested** (see "Build status" in [market/Plan.md](market/Plan.md); what is left is in [BACKLOG.md](BACKLOG.md), and `sim` covers the market only so far ([sim/RESULTS.md](sim/RESULTS.md))). Bank, Dashboard and Trade have only their `Plan.md` files so far.
 
 Build order (root [Plan.md §15](Plan.md)):
 - **Phase 0:** `api` + `core`
@@ -138,8 +138,8 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 ./gradlew build                    # all modules
 ./gradlew :core:test               # one module's tests
 ./gradlew :core:runServer          # run-paper dev server (1.21.11) with the module + its deps
-./gradlew :sim:test                # CI economy scenarios (< 2 min); arrives with the sim module
-./gradlew :sim:run --args="scenarios/small-20.yml"   # long simulation / tuning sweeps
+./gradlew :sim:test                # CI economy scenarios (< 2 min)
+./gradlew :sim:run --args="small-20.yml --days 120"   # long simulation; add --sweep key=v1,v2 for tuning sweeps
 ```
 - Each plugin module builds its jar into `<module>/build/libs/`.
 - `api` also publishes `com.patelheet:capitalengine-api` as a **binary jar plus Javadoc only** (no sources jar).

@@ -3,6 +3,23 @@
 > **Artifact:** `CapitalMarket.jar` (optional add-on) · **Depends on:** CapitalEngine ([../core/Plan.md](../core/Plan.md)) via [../api/Plan.md](../api/Plan.md)
 > **Parent plan:** [../Plan.md](../Plan.md)
 
+## 0. Build status (what exists, and where the code differs from this plan)
+**Built and tested (`./gradlew :market:test`):** everything in §1 except the items under "Not built yet": Quick Sell / Quick Buy / listings / wanted with escrow, the Stash, the server market maker, recipe pricing, two-phase trades with crash recovery, the Jobs Board (delivery, build, project and "the town needs" jobs, project chests), the autopilot with `MonetaryPolicy` + `IndicatorProvider`, Market News (chat and Discord webhook), tutorial, flood/dupe alerts, stalls, chest menus, `/economy`, PlaceholderAPI, and both escrow checks.
+
+**Deliberate differences from the sections below:**
+- **One worker thread, no per-item locks and no in-memory order book (§5.3, §9).** Core's ledger group-commits, so what costs time is waiting on it, not matching. `MarketService.execute` therefore writes all PENDING rows in one database transaction, sends every fill's money transaction before waiting on any, and finishes the successes in one more transaction: a 32-stack dump waits once. SQLite has a single writer, so per-item parallelism would only queue on the database; one worker also removes every lock and every "reserve, then roll back" path. The book is read from `orders` through the `(item, side, status, unit_price, id)` index. Today's server spending and per-item buying are kept in memory and reloaded from `trades` when the day changes. If a very busy server ever needs more, shard the worker by item and give each shard its own connection (MySQL/Postgres first).
+- **Storage:** SQLite (default), MySQL/MariaDB and PostgreSQL through HikariCP, with `market-db/<dialect>/V<n>__*.sql` migrations and an optional table `prefix` (default `market_` outside SQLite). SQLite keeps `synchronous=FULL` (a PENDING row must survive power loss before its money moves). `StoreDialectTest` runs every statement on SQLite always and on PostgreSQL/MySQL when `CAPITAL_TEST_POSTGRES` / `CAPITAL_TEST_MYSQL` are set.
+- **Item keys rebuild exact stacks** (`iron_ingot`, `enchanted_book{sharpness:5}`, `potion{strong_healing}`), so there is no `items` table with a stack BLOB. A stack is tradable only if it equals the stack rebuilt from its key.
+- `server-items.yml` lists what the server trades; prices come from `values.yml` (raw materials, never overridden) and `RecipeValuer`. `/market admin revalue` also forgets drift.
+- A fresh server starts with `target-stock-default` of every server item (otherwise an empty stock prices at 4x base).
+- `orders` and `jobs` have no `escrow_left`: escrow is `Σ remaining × price` of open orders/jobs. `policy_state` has plain columns instead of JSON. `price_daily` is not kept; weekly figures come from `trades`, which is pruned after 8 weeks.
+- The same-IP trade filter is not implemented (outliers are cut at 3x the median).
+- "The town needs" jobs follow §5.8 literally: delivered items are used up and don't change server stock.
+- **Floodgate:** Bedrock players get one input form for number entry and a Yes/No form for confirmations (`MarketForms`, the only class that touches Floodgate); everyone else gets chat prompts and chest menus. Orders and jobs expire after a number of economic days, not wall-clock time.
+- `/market admin reload` re-reads messages, `values.yml`, `projects.yml` and recipes; other `config.yml` settings need a restart.
+
+**Not built yet:** Citizens NPC stalls and the other items in [../BACKLOG.md](../BACKLOG.md). MySQL/MariaDB is written and unit-tested only against SQLite and PostgreSQL.
+
 ## 1. Purpose and scope
 CapitalMarket is where prices come from and where most players earn coins. It covers:
 1. **The Market:** Quick Sell and Quick Buy, "set my own price" listings and "wanted" requests, a Stash for items, and market stalls.
