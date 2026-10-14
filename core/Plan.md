@@ -353,12 +353,12 @@ Only one server may use a ledger database. On startup core writes a `server_lock
 
 ## 11. Done when
 Status after the Phase 0 build (automated = `./gradlew :core:test`, 57 tests):
-*Real-server smoke test done on Paper 1.21.11 and 26.2 (`./gradlew :core:runServer [-Pmc=26.2]`, with VaultUnlocked 2.20.2): `plugin.yml` `libraries:` load, `api-version: '1.21.11'` is accepted, both Vault interfaces register, `/ce` console commands work, and shutdown is clean. In-game session confirmed working by the owner (2026-10-12): `/money`, `/pay` with confirmation, starter coins, `/ce` tools. Still open: legacy Vault-only, real EssentialsX/Jobs, a hard `kill -9`, MySQL and Postgres.*
+*Real-server smoke test done on Paper 1.21.11 and 26.2 (`./gradlew :core:runServer [-Pmc=26.2]`, with VaultUnlocked 2.20.2): `plugin.yml` `libraries:` load, `api-version: '1.21.11'` is accepted, both Vault interfaces register, `/ce` console commands work, and shutdown is clean. In-game session confirmed working by the owner (2026-10-12): `/money`, `/pay` with confirmation, starter coins, `/ce` tools. A real `SIGKILL` mid-load is automated (`CrashTest`: books balance, nothing acknowledged is lost). PostgreSQL 14 is verified through `DialectTest` (`CAPITAL_TEST_POSTGRES=jdbc:postgresql://host/capitalengine_test\|user\|pass ./gradlew :core:test`, wipes that database). Still open: MySQL/MariaDB (`CAPITAL_TEST_MYSQL`, same test), a real server with only the original Vault, real EssentialsX/Jobs.*
 - [ ] On a fresh Paper server with **Vault**, and separately with **VaultUnlocked**, EssentialsX's `/bal` and a Jobs-style plugin work through CapitalEngine. *(Adapters, attribution and all vault-modes are covered by `VaultTest` under MockBukkit; the real-server run is still to do.)*
 - [x] Every movement is visible in `/ce audit` with the correct plugin. *(`PlayerFlowTest`, `VaultTest` flows by plugin.)*
 - [x] `/money`, `/pay` (with confirmation) and starter coins work. All player text is plain-language. *(`PlayerFlowTest`, `MessagesTest`; still to eyeball on a real client, Java and Bedrock.)*
 - [x] `/ce import Essentials` moves balances exactly. A second run is a no-op. *(`PlayerFlowTest` with a fake provider; try it against real EssentialsX.)*
-- [x] Killing the server mid-load and restarting gives a passing `/ce check`. *(`PersistenceTest`: spill, replay, auditor. A real `kill -9` run is still to do.)*
+- [x] Killing the server mid-load and restarting gives a passing `/ce check`. *(`CrashTest` SIGKILLs a heavily-writing process; `PersistenceTest` covers spill and replay.)*
 - [ ] The API jar is published, and the api §5.8 example add-on runs against core. *(Jar, Javadoc and POM build with the licence inside; the example runs in `EconomicClockTest`; publishing to the owner's Maven repo needs the repo URL and credentials.)*
 
 ## 12. Open questions
