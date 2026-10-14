@@ -1,0 +1,22 @@
+CREATE TABLE stash (uuid TEXT, item TEXT, qty INTEGER NOT NULL, locked INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (uuid, item));
+CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, item TEXT, side TEXT, owner TEXT, unit_price INTEGER, qty INTEGER, filled INTEGER DEFAULT 0, created INTEGER, expires INTEGER, status TEXT);
+CREATE TABLE trades (id INTEGER PRIMARY KEY AUTOINCREMENT, item TEXT, buyer TEXT, seller TEXT, server_side TEXT, unit_price INTEGER, qty INTEGER, fee INTEGER, day INTEGER, week INTEGER, order_id INTEGER, order_side TEXT, ts INTEGER, status TEXT);
+CREATE TABLE server_stock (item TEXT PRIMARY KEY, qty INTEGER NOT NULL);
+CREATE TABLE item_values (item TEXT PRIMARY KEY, base INTEGER, last_ref INTEGER, source TEXT);
+CREATE TABLE day_stats (day INTEGER PRIMARY KEY, treasury_in INTEGER, active_players INTEGER);
+CREATE TABLE policy_state (week INTEGER PRIMARY KEY, rate REAL, savings_budget INTEGER, jobs_budget INTEGER, buyer_budget INTEGER, spread REAL, idx REAL, inflation REAL, new_money INTEGER);
+CREATE TABLE jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, poster TEXT, item TEXT, qty_total INTEGER, qty_done INTEGER DEFAULT 0, pay_unit INTEGER, project TEXT, created INTEGER, expires INTEGER, status TEXT, kind TEXT DEFAULT 'DELIVERY', assignee TEXT, note TEXT);
+CREATE TABLE job_deliveries (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, uuid TEXT, qty INTEGER, paid INTEGER, day INTEGER, server INTEGER, status TEXT);
+CREATE TABLE stalls (world TEXT, x INTEGER, y INTEGER, z INTEGER, PRIMARY KEY (world, x, y, z));
+CREATE TABLE tutorial (uuid TEXT PRIMARY KEY, step INTEGER NOT NULL);
+CREATE TABLE flood_stats (who TEXT, item TEXT, avg REAL, PRIMARY KEY (who, item));
+-- the book is read per item and side in price order; trades are summed by day and week; the rest are status scans
+CREATE INDEX market_orders_book ON orders (item, side, status, unit_price, id);
+CREATE INDEX market_orders_owner ON orders (owner, status);
+CREATE INDEX market_orders_expiry ON orders (status, expires);
+CREATE INDEX market_trades_day ON trades (day, server_side);
+CREATE INDEX market_trades_week ON trades (week, item);
+CREATE INDEX market_trades_status ON trades (status);
+CREATE INDEX market_jobs_status ON jobs (status);
+CREATE INDEX market_jobs_project ON jobs (project, item);
+CREATE INDEX market_deliveries_status ON job_deliveries (status, day);
