@@ -16,6 +16,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockbukkit)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly(libs.postgres)   // DialectTest runs against real servers when CAPITAL_TEST_* is set
+    testRuntimeOnly(libs.mysql)
 }
 
 tasks.processResources {
