@@ -1,0 +1,3 @@
+# Owner projects. Players deliver the items on the Jobs Board; the server pays ref price + the premium and the items are used up.
+# spawn-railway:
+#   needs: { iron_ingot: 5000, rail: 2000 }

@@ -1,0 +1,43 @@
+# CapitalMarket. Coin amounts are written like in CapitalEngine ("1.5", "20").
+
+storage:
+  type: sqlite            # sqlite | mysql | mariadb | postgres
+  file: market.db         # sqlite only
+  # host: localhost       # mysql / mariadb / postgres
+  # port: 3306
+  # database: capitalmarket
+  # user: ""
+  # password: ""
+  # prefix: market_       # table name prefix for mysql/postgres, so a database can be shared
+  # pool-size: 4
+market:
+  fee: 0.02                 # taken from the seller on player-to-player sales
+  max-open-orders: 20
+  order-expiry-days: 14
+  blocked-items: []         # e.g. [elytra, netherite_ingot]
+
+stash:
+  max-stacks: 54            # one double chest
+  withdraw-anywhere: false  # false: take items out near a market stall (/market admin stall create). true suits small kid servers
+
+maker:                      # the server buys and sells the items listed in values.yml
+  k: 0.5
+  target-stock-default: 640
+  stock-use-rate: 0.02      # share of server stock used up each day
+  per-item-daily-buy: 1280
+
+jobs:
+  player-job-expiry-days: 7
+  server-premium: 0.10
+
+autopilot:
+  target-monthly-inflation: 0.02
+  target-growth-monthly: 0.03
+  floor-per-active-player: 150   # coins/day of new money per active player
+  rate: { start-weekly: 0.02, min-weekly: 0.0, max-weekly: 0.08 }
+  warmup-weeks: 2
+  split-jobs-vs-buyer: 0.6
+
+news: { enabled: true, discord-webhook: "" }
+tutorial: { enabled: true, reward: 20 }
+alerts: { flood-multiplier: 10, flood-min: 256 }

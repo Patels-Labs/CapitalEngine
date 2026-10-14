@@ -1,0 +1,34 @@
+name: CapitalMarket
+main: com.patelheet.capitalengine.market.CapitalMarketPlugin
+version: ${version}
+api-version: '1.21.11'
+description: Quick Sell, player prices, a server market maker, jobs and a hidden inflation autopilot.
+author: Heet Patel
+website: https://patelheet.com
+depend: [CapitalEngine]
+softdepend: [CapitalBank, PlaceholderAPI, floodgate, Citizens]
+libraries:
+  - com.zaxxer:HikariCP:7.1.0
+  - org.postgresql:postgresql:42.7.14
+
+commands:
+  market:
+    description: Buy and sell items
+    usage: /market [sell|buy|list|wanted|orders|cancel|stash|take|price|yes]
+    permission: capitalmarket.use
+  jobs:
+    description: The Jobs Board
+    aliases: [jobboard]
+    usage: /jobs [list|post|build|deliver|accept|done|problem|cancel]
+    permission: capitalmarket.jobs
+  economy:
+    description: Prices and trends
+    usage: /economy
+    permission: capitalmarket.economy
+
+permissions:
+  capitalmarket.use: { description: Use /market, default: true }
+  capitalmarket.jobs: { description: Use the Jobs Board, default: true }
+  capitalmarket.economy: { description: Use /economy, default: true }
+  capitalmarket.jobs.admin: { description: Settle build-job disputes, default: op }
+  capitalmarket.admin: { description: /market admin, default: op }
