@@ -48,8 +48,10 @@ public final class MarketService implements AutoCloseable {
         static Result err(String key) { return new Result(0, 0, key, 0); }
     }
 
-    public record Quote(int qty, long total) {}
-    public record PriceInfo(long ask, long bid, long stock) {}
+    /** {@code reason} is null when the whole quantity is available, else a messages.yml suffix: budget, daily-limit, no-buyers, no-stock. */
+    public record Quote(int qty, long total, String reason) {}
+    /** {@code canBuy} is how many units the market will still buy today. */
+    public record PriceInfo(long ask, long bid, long stock, int canBuy) {}
     public record Book(List<Matcher.Order> asks, List<Matcher.Order> bids) {}
 
     final Plugin plugin;
@@ -198,7 +200,8 @@ public final class MarketService implements AutoCloseable {
         Long b = base.get(item);
         if (b == null) return null;
         syncDay();
-        long budget = policy == null ? 0 : Math.max(0, policy.buyer() - cSpent);
+        // the jobs share of the budget has no use on a server with no server jobs open, so the buyer may spend it too
+        long budget = policy == null ? 0 : Math.max(0, policy.buyer() - cSpent + (store.anyServerJobOpen() ? 0 : Math.max(0, policy.jobs() - cJobPaid)));
         double spread = policy == null ? spread0 : policy.spread();
         return new Matcher.Maker(b, store.stock(item), targetStock, k, spread, budget, Math.max(0, dailyBuyCap - cBought.getOrDefault(item, 0)));
     }
@@ -206,9 +209,7 @@ public final class MarketService implements AutoCloseable {
     public CompletableFuture<PriceInfo> price(String item) {
         return run(() -> {
             if (!base.containsKey(item)) return null;
-            long ref = ref(item);
-            double spread = policy == null ? spread0 : policy.spread();
-            return new PriceInfo(ReferencePrice.ask(ref, spread), ReferencePrice.bid(ref, spread), store.stock(item));
+            return priceInfo(item, policy == null ? spread0 : policy.spread());
         });
     }
 
@@ -217,12 +218,28 @@ public final class MarketService implements AutoCloseable {
         return run(() -> {
             Map<String, PriceInfo> m = new HashMap<>();
             double spread = policy == null ? spread0 : policy.spread();
-            for (String item : items) if (base.containsKey(item)) {
-                long ref = ref(item);
-                m.put(item, new PriceInfo(ReferencePrice.ask(ref, spread), ReferencePrice.bid(ref, spread), store.stock(item)));
-            }
+            for (String item : items) if (base.containsKey(item)) m.put(item, priceInfo(item, spread));
             return m;
         });
+    }
+
+    private PriceInfo priceInfo(String item, double spread) {
+        long ref = ref(item), bid = ReferencePrice.bid(ref, spread);
+        Matcher.Maker m = maker(item);
+        return new PriceInfo(ReferencePrice.ask(ref, spread), bid, store.stock(item), m == null ? 0 : (int) Math.min(m.dayCapLeft(), m.budgetLeft() / bid));
+    }
+
+    /** Why selling {@code wanted} units fell short once {@code plan} had used what it could, as a messages.yml suffix; null if it didn't. */
+    private String sellShortfall(String item, int wanted, List<Fill> plan) {
+        if (Matcher.qty(plan) >= wanted) return null;
+        Matcher.Maker m = maker(item);
+        if (m == null) return "no-buyers";
+        long spent = 0;
+        int sold = 0;
+        for (Fill f : plan) if (f.server()) { spent += f.price() * f.qty(); sold += f.qty(); }
+        if (m.dayCapLeft() - sold <= 0) return "daily-limit";
+        long nextBid = ReferencePrice.bid(ReferencePrice.ref(m.base(), m.stock() + sold, m.target(), m.k()), m.spread());
+        return m.budgetLeft() - spent < nextBid ? "budget" : "no-buyers";
     }
 
     /** Player listings (cheapest first) and wanted orders (best first) for an item, for the menus. */
@@ -244,7 +261,8 @@ public final class MarketService implements AutoCloseable {
     public CompletableFuture<Quote> quote(UUID p, String item, int qty, boolean buying) {
         return run(() -> {
             List<Fill> plan = plan(p, item, qty, buying, buying ? Long.MAX_VALUE : 0);
-            return new Quote(Matcher.qty(plan), buying ? Matcher.total(plan) : net(plan));
+            int got = Matcher.qty(plan);
+            return new Quote(got, buying ? Matcher.total(plan) : net(plan), buying ? (got < qty ? "no-stock" : null) : sellShortfall(item, qty, plan));
         });
     }
 
@@ -282,7 +300,7 @@ public final class MarketService implements AutoCloseable {
         return run(() -> {
             if (store.stashFree(p, item) < qty) return Result.err("not-enough-items");
             List<Fill> plan = plan(p, item, qty, false, 0);
-            if (plan.isEmpty()) return Result.err("nothing-to-sell");
+            if (plan.isEmpty()) return Result.err("sell-" + sellShortfall(item, qty, plan));
             Result r = execute(p, item, false, plan);
             if (r.qty() > 0) tutorial.advance(p, 2);
             return r;
@@ -293,7 +311,7 @@ public final class MarketService implements AutoCloseable {
         return run(() -> {
             if (!fits(p, item, qty)) return Result.err("stash-full");
             List<Fill> plan = plan(p, item, qty, true, Long.MAX_VALUE);
-            if (plan.isEmpty()) return Result.err("nothing-to-buy");
+            if (plan.isEmpty()) return Result.err("buy-no-stock");
             long total = Matcher.total(plan);
             return total > maxTotal ? new Result(0, total, "too-expensive", 0) : execute(p, item, true, plan);
         });

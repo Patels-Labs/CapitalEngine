@@ -15,6 +15,9 @@
 - `orders` and `jobs` have no `escrow_left`: escrow is `Σ remaining × price` of open orders/jobs. `policy_state` has plain columns instead of JSON. `price_daily` is not kept; weekly figures come from `trades`, which is pruned after 8 weeks.
 - The same-IP trade filter is not implemented (outliers are cut at 3x the median).
 - "The town needs" jobs follow §5.8 literally: delivered items are used up and don't change server stock.
+- **Budget pooling:** while no server job is open, the jobs share of the daily budget (60%) is added to the buyer's, so a fresh server can buy more than one expensive item a day. The total new-money allowance is unchanged. Without this a solo player's 60-coin buyer budget could not cover a single 42-coin diamond sale after any other sale.
+- **Stalls** place a barrel on top of the block the administrator is looking at, with a text-display hologram above it. They need three clear blocks and never replace the original block. Players cannot break the barrel; `/market admin stall remove` does.
+- **Menus** use named buttons with lore for figures, a blank-pane grid, centred layouts, a Sell side (green) and a Buy side (orange) on item pages, Browse with Buy/Sell/stock/trend lore, and an item search (typing a name the market doesn't stock opens that item's player-listings page).
 - **Floodgate:** Bedrock players get one input form for number entry and a Yes/No form for confirmations (`MarketForms`, the only class that touches Floodgate); everyone else gets chat prompts and chest menus. Orders and jobs expire after a number of economic days, not wall-clock time.
 - `/market admin reload` re-reads messages, `values.yml`, `projects.yml` and recipes; other `config.yml` settings need a restart.
 

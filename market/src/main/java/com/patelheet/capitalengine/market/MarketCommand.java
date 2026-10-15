@@ -147,8 +147,15 @@ final class MarketCommand implements CommandExecutor, TabCompleter {
             case "stall" -> {
                 Block b = p.getTargetBlockExact(6);
                 if (b == null || n < 3) { a.say(p, "stall-look"); return; }
-                boolean ok = x[2].equalsIgnoreCase("remove") ? stalls.remove(b) : stalls.create(b);
-                a.say(p, ok ? "stall-" + x[2].toLowerCase() : "stall-nochange");
+                boolean remove = x[2].equalsIgnoreCase("remove");
+                Stalls.Result r = remove ? stalls.remove(b) : stalls.create(b);
+                a.say(p, switch (r) {
+                    case CREATED -> "stall-created";
+                    case REMOVED -> "stall-removed";
+                    case NO_SPACE -> "stall-no-space";
+                    case ALREADY -> "stall-already";
+                    case NOT_A_STALL -> "stall-not-a-stall";
+                });
             }
             case "project" -> project(p, x);
             default -> a.say(p, "help");
