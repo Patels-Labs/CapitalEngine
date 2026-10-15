@@ -36,7 +36,7 @@ import org.bukkit.plugin.Plugin;
 
 /** {@link CapitalApi} on top of the ledger. Every mutation is a {@link Req} with {@code bypass=false}. */
 public final class ApiImpl implements CapitalApi {
-    /** Written into the API jar by its build, so there is one place to bump it: api/gradle.properties. */
+    /** Written into the API jar by its build, so the version lives only in api/version.txt. */
     public static final String VERSION = readVersion();
 
     private static String readVersion() {

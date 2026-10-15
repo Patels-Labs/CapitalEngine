@@ -47,8 +47,9 @@ Once code exists, each subproject follows the standard Gradle layout:
 | `src/main/java/com/patelheet/capitalengine/<module>/` | Code |
 | `src/main/resources/` | `plugin.yml`, `config.yml`, `messages.yml`, `db/<dialect>/V<n>__*.sql`, … |
 | `src/test/java/...` | Tests |
+| `version.txt`, `CHANGELOG.md` | The module's version and release notes. **Release Please owns both; never edit them by hand.** (`sim` is never released and has neither.) |
 
-Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), plus `gradle/libs.versions.toml` (all dependency versions in one place).
+Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), plus `gradle/libs.versions.toml` (all dependency versions in one place), and `release-please-config.json` with `.release-please-manifest.json` (release automation).
 
 **The plans are the spec.**
 - If a subproject `Plan.md` disagrees with the root `Plan.md`, the **subproject plan wins**. Fix the root.
@@ -154,11 +155,19 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 ## Git, CI and releases
 - **Two repos:** `patelheet30/CapitalEngine` (private, all source) and `patelheet30/capitalengine-api` (public, binaries and Javadoc only, served by GitHub Pages as a Maven repo at `https://patelheet30.github.io/capitalengine-api/m2`). Never push source to the public one; its workflows fail on `.java`/`.kt`/`.sql` files.
 - **Work on a branch, open a PR, squash-merge once CI (`build`) is green.** Don't push to `main`. (GitHub's free plan can't enforce this on private repos, so it is a habit. The public repo is enforced.)
-- **Versions** live in one place per module: `<module>/gradle.properties` (`moduleVersion=`). The API jar reports its own version to `CapitalApi.apiVersion()` from that.
-- **Release a plugin:** bump `moduleVersion` in a PR, merge, then `git tag core-v1.0.1 && git push origin core-v1.0.1`. The workflow checks the tag is on `main` and matches the version, builds, and attaches `<Plugin>-<version>.jar` (for example `CapitalEngine-1.0.1.jar`) to a private GitHub Release; download it from there to upload to Modrinth/CurseForge/Hangar. Rehearse with the "Release plugin" workflow and `dry_run`.
-- **Release the API:** same, with an `api-v<version>` tag. The workflow builds, tests, and pushes a `release/api-<version>` branch to the public repo, which opens a PR. Merging that PR publishes the Maven files and Javadoc and creates the public `v<version>` release. Run the "Release API" workflow manually with `dry_run` to rehearse.
+- **Commit messages and PR titles are Conventional Commits: `type(scope): summary`.** The PR title becomes the squash commit on `main`, and Release Please reads it to choose the next version and write the changelog. The `PR title` check rejects any other shape. Use the same format for commits on a branch.
+  - **Type: what kind of change.** `feat` (new behaviour, minor release), `fix` (bug fix, patch), `perf` (patch), `refactor`, `docs`, `test`, `build`, `ci`, `chore` (these four trigger no release on their own), `revert`. Add `!` after the scope, or a `BREAKING CHANGE:` footer, for a change that breaks config, the API or saved data (major release).
+  - **Scope: where it happens.** `api`, `core`, `market`, `bank`, `dashboard`, `trade`, `sim`, or `repo` for anything that belongs to no module (CLAUDE.md, workflows, root build). Several scopes are comma separated: `fix(core,api): ...`.
+  - **The scope must match the folder you changed.** Release Please decides which module a commit releases from the files it touches, not from the scope, so `feat(market)` that edits `core/` would release core.
+  - **Summary:** imperative, lower case, no full stop, 72 characters or fewer for the whole title. Examples: `feat(market): add item search`, `fix(core): stop double-counting activity on rejoin`, `ci(repo): automate releases with Release Please`, `feat(api)!: remove the deprecated history overload`.
+  - A change players or owners will notice (a price default, a menu, a message) is `feat` or `fix`, not `chore`, so it reaches the changelog.
+- **Versions and changelogs are automated.** Each released module's version lives only in `<module>/version.txt` (the build and the workflows read it; the API jar reports it through `CapitalApi.apiVersion()`). Don't change it, `CHANGELOG.md` or `.release-please-manifest.json` in a feature PR.
+- **Release a plugin or the API:** merge feature PRs as usual. The `Release` workflow keeps one release PR per module open (for example `chore(market): release 1.1.0`) with the version bump and changelog. When you want to ship, merge that PR. The workflow then tags `<module>-v<version>`, creates the GitHub Release with the changelog as its notes, builds, and attaches `<Plugin>-<version>.jar` (for example `CapitalEngine-1.1.0.jar`); download it from the release to upload to Modrinth/CurseForge/Hangar. For `api` it also pushes a `release/api-<version>` branch to the public repo, which opens a PR; merging that PR publishes the Maven files and Javadoc and creates the public `v<version>` release.
+- **Rehearse or repair:** run the "Release plugin" or "Release API" workflow by hand with `dry_run` to build without publishing, or give it an existing tag to attach a jar again. Don't create release tags by hand.
+- **Release PRs don't run CI by themselves** (GitHub doesn't start workflows for pull requests opened with the built-in token). The release workflow builds and tests the module before it attaches anything, and `main` is built after the merge.
+- **One-time repo settings the automation needs:** *Settings, Actions, General, "Allow GitHub Actions to create and approve pull requests"* turned on, and *Settings, General, Pull Requests, squash merge default message* set to "Pull request title".
 - **No AI attribution on the public repo.** Commits, PR titles and bodies, release notes and files that go to `capitalengine-api` must not contain "Co-Authored-By: Claude", "Generated with Claude Code" or any similar line. (The attribution lines other tooling suggests are fine on the private repo only.)
-- **Published versions are immutable.** Fix a bad release with a new patch version. Release tags can't be moved or deleted.
+- **Published versions are immutable.** Fix a bad release with a `fix` PR and the patch release it produces. Release tags can't be moved or deleted.
 
 ## Licence and confidentiality
 - **Closed source, All Rights Reserved.** © Heet Patel (patelheet.com).

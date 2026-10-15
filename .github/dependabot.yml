@@ -3,9 +3,11 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    commit-message: { prefix: "ci(repo)" }
   - package-ecosystem: gradle
     directory: /
     schedule: { interval: weekly }
+    commit-message: { prefix: "build(repo)" }
     # Paper API, VaultUnlocked and friends are pinned on purpose (lowest supported version): bump by hand.
     ignore:
       - dependency-name: "io.papermc.paper:paper-api"

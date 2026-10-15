@@ -1,10 +1,11 @@
-# Tag a plugin to release it, for example:  git tag core-v1.0.0 && git push origin core-v1.0.0
-# (API releases use api-v* and have their own workflow.)
-# "Run workflow" with dry_run=true builds the module and lists the jars it would attach, without releasing anything.
+# Called by release-please.yml after a release PR is merged: builds the module and attaches its jar to the GitHub Release that
+# Release Please just created. "Run workflow" with dry_run builds without attaching; give it an existing tag to re-attach a jar.
 name: Release plugin
 on:
-  push:
-    tags: ["*-v*", "!api-v*"]
+  workflow_call:
+    inputs:
+      module: { type: string, required: true }
+      tag: { type: string, required: true }
   workflow_dispatch:
     inputs:
       module:
@@ -12,8 +13,12 @@ on:
         type: choice
         options: [core, market]
         default: core
+      tag:
+        description: Existing release tag to attach the jar to (empty for a build-only run)
+        type: string
+        default: ""
       dry_run:
-        description: Build only, release nothing
+        description: Build only, attach nothing
         type: boolean
         default: true
 permissions:
@@ -22,31 +27,31 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      MODULE: ${{ inputs.module }}
+      TAG: ${{ inputs.tag }}
     steps:
       - uses: actions/checkout@v7
-        with: { fetch-depth: 0 }
-      - name: Must be on main and match the module version
+        with:
+          ref: ${{ inputs.tag || github.sha }}
+          fetch-depth: 0
+      - name: The release must be on main and match the module version
         run: |
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            module="${GITHUB_REF_NAME%%-v*}"; version="${GITHUB_REF_NAME#*-v}"
-          else
-            module="${{ inputs.module }}"; version=$(grep '^moduleVersion=' "$module/gradle.properties" | cut -d= -f2)
+          git merge-base --is-ancestor HEAD origin/main || { echo "::error::$(git rev-parse --short HEAD) is not on main"; exit 1; }
+          version=$(tr -d '[:space:]' < "$MODULE/version.txt")
+          if [ -n "$TAG" ]; then
+            [ "$TAG" = "$MODULE-v$version" ] || { echo "::error::tag $TAG but $MODULE/version.txt says $version"; exit 1; }
           fi
-          declared=$(grep '^moduleVersion=' "$module/gradle.properties" | cut -d= -f2)
-          [ "$declared" = "$version" ] || { echo "::error::$module/gradle.properties says $declared but the tag says $version"; exit 1; }
-          echo "MODULE=$module" >> "$GITHUB_ENV"; echo "VERSION=$version" >> "$GITHUB_ENV"
-          echo "DRY=${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}" >> "$GITHUB_ENV"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "ATTACH=${{ inputs.tag != '' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: 21 }
       - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew build
       - name: Dry run summary
-        if: env.DRY == 'true'
+        if: env.ATTACH != 'true'
         run: ls -la "$MODULE"/build/libs/
-      - name: GitHub Release (private repo) with the jar attached
-        if: env.DRY != 'true'
+      - name: Attach the jar to the GitHub Release
+        if: env.ATTACH == 'true'
         env: { GH_TOKEN: "${{ github.token }}" }
-        run: |
-          flags=""; case "$VERSION" in *-*) flags="--prerelease";; esac
-          gh release create "$GITHUB_REF_NAME" $flags --generate-notes --title "$MODULE $VERSION" "$MODULE"/build/libs/*.jar
+        run: gh release upload "$TAG" "$MODULE"/build/libs/*.jar --clobber
