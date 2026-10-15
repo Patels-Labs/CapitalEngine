@@ -1,0 +1,25 @@
+# The PR title becomes the squash commit on main, and Release Please reads it to choose the next version and write the changelog.
+name: PR title
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions: {}
+jobs:
+  title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Title must be type(scope), then a colon and a summary
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          types="feat|fix|perf|refactor|docs|test|build|ci|chore|revert"
+          scopes="api|core|market|bank|dashboard|trade|sim|repo"
+          if [[ ! "$TITLE" =~ ^($types)\(($scopes)(,($scopes))*\)\!?:\ .+ ]]; then
+            echo "::error title=PR title::\"$TITLE\" is not type(scope): summary. Types: ${types//|/, }. Scopes: ${scopes//|/, } (several allowed, comma separated; repo for changes that belong to no module). Add ! after the scope for a breaking change. Example: feat(market): add item search"
+            exit 1
+          fi
+          if [ ${#TITLE} -gt 72 ]; then
+            echo "::error title=PR title::The title is ${#TITLE} characters; keep it to 72 so the changelog stays readable."
+            exit 1
+          fi

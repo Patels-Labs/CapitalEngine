@@ -1,13 +1,17 @@
-# Tag the API to publish it:  git tag api-v1.0.0 && git push origin api-v1.0.0
-# The workflow builds, tests, writes the binaries into the PUBLIC repo (patelheet30/capitalengine-api) on a
-# release/api-<version> branch, and that repo opens a PR. Merging that PR is the approval; GitHub Pages then serves it.
-# "Run workflow" with dry_run=true does everything except push.
+# Called by release-please.yml after the api release PR is merged. It builds and tests, writes the binaries into the PUBLIC repo
+# (patelheet30/capitalengine-api) on a release/api-<version> branch, and that repo opens a PR. Merging that PR is the approval;
+# GitHub Pages then serves it. "Run workflow" with dry_run=true does everything except push.
 name: Release API
 on:
-  push:
-    tags: ["api-v*"]
+  workflow_call:
+    inputs:
+      tag: { type: string, required: true }
   workflow_dispatch:
     inputs:
+      tag:
+        description: Existing release tag to publish (empty for a build-only run)
+        type: string
+        default: ""
       dry_run:
         description: Build and stage only, push nothing
         type: boolean
@@ -20,18 +24,21 @@ jobs:
     timeout-minutes: 30
     env:
       PUBLIC_REPO: patelheet30/capitalengine-api
+      TAG: ${{ inputs.tag }}
     steps:
       - uses: actions/checkout@v7
-        with: { fetch-depth: 0 }
-      - name: Must come from main, and the tag must match api/gradle.properties
+        with:
+          ref: ${{ inputs.tag || github.sha }}
+          fetch-depth: 0
+      - name: Must come from main, and the tag must match api/version.txt
         run: |
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::not on main"; exit 1; }
-          declared=$(grep '^moduleVersion=' api/gradle.properties | cut -d= -f2)
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            [ "${GITHUB_REF_NAME#api-v}" = "$declared" ] || { echo "::error::tag says ${GITHUB_REF_NAME#api-v}, api/gradle.properties says $declared"; exit 1; }
+          git merge-base --is-ancestor HEAD origin/main || { echo "::error::not on main"; exit 1; }
+          declared=$(tr -d '[:space:]' < api/version.txt)
+          if [ -n "$TAG" ]; then
+            [ "$TAG" = "api-v$declared" ] || { echo "::error::tag $TAG but api/version.txt says $declared"; exit 1; }
           fi
           echo "VERSION=$declared" >> "$GITHUB_ENV"
-          echo "DRY=${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}" >> "$GITHUB_ENV"
+          echo "DRY=${{ inputs.tag == '' || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: 21 }
       - uses: gradle/actions/setup-gradle@v6
@@ -67,9 +74,7 @@ jobs:
         if: env.DRY == 'true'
         working-directory: site
         run: git status --short | head -50
-      - name: Private GitHub Release for the tag
+      - name: Attach the jar to the GitHub Release
         if: env.DRY != 'true'
         env: { GH_TOKEN: "${{ github.token }}" }
-        run: |
-          flags=""; case "$VERSION" in *-*) flags="--prerelease";; esac
-          gh release create "$GITHUB_REF_NAME" $flags --generate-notes --title "API $VERSION" api/build/libs/*.jar
+        run: gh release upload "$TAG" api/build/libs/*.jar --clobber

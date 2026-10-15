@@ -3,7 +3,8 @@ plugins { `java-library` }
 subprojects {
     apply(plugin = "java-library")
     group = "com.patelheet"
-    version = property("moduleVersion")!!   // each module owns its version in <module>/gradle.properties
+    // each released module owns its version in <module>/version.txt, which Release Please maintains; sim is never released
+    version = file("version.txt").takeIf { it.exists() }?.readText()?.trim() ?: "0.0.0"
     repositories {
         mavenCentral()
         maven("https://repo.papermc.io/repository/maven-public/")
