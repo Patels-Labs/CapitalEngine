@@ -45,7 +45,7 @@ public class CapitalMarketPlugin extends JavaPlugin implements Listener {
 
         actions = new Actions(this, service, msg);
         menus = new Menus(actions, service, msg);
-        stalls = new Stalls(service, menus);
+        stalls = newStalls(service, menus);
         actions.stalls = stalls;
         stalls.load();
         for (Listener l : new Listener[]{this, new Menu.Guard(), stalls, service.tutorial}) getServer().getPluginManager().registerEvents(l, this);
@@ -72,6 +72,9 @@ public class CapitalMarketPlugin extends JavaPlugin implements Listener {
             default -> throw new IllegalArgumentException("storage.type must be sqlite, mysql, mariadb or postgres (got '" + type + "')");
         };
     }
+
+    /** Tests replace this to stand in for holograms, which MockBukkit cannot spawn. */
+    Stalls newStalls(MarketService service, Menus menus) { return new Stalls(service, menus); }
 
     /** For tests and the simulator. */
     public MarketService service() { return service; }

@@ -3,6 +3,7 @@
 Things we know about and have decided not to do yet. Newest first within each group. Remove an item when it ships.
 
 ## Market
+- **Verify stall holograms on Bedrock.** The hologram is a text display entity; Geyser may not render it. The barrel and its right-click menu work either way. If it doesn't render, add a sign or an armor stand fallback for Bedrock-visible servers.
 - **Citizens NPC stalls.** A stall can be any block today (`/market admin stall create`). An NPC stall calls the same `Stalls.canWithdraw` / `Menus.main`; it needs Citizens as a `compileOnly` + `softdepend` (already in `plugin.yml`), a click listener in its own isolated class, and a `kind` for the stall row.
 - **Run `StoreDialectTest` against MySQL/MariaDB.** The SQL is written for all three databases and PostgreSQL passes, but no MySQL server was available when it was built. Point `CAPITAL_TEST_MYSQL` at a throwaway database named like `capitalengine_test` and run `./gradlew :market:test --tests '*StoreDialectTest'`.
 - **Run the market's plugin-level tests against PostgreSQL/MySQL.** `MarketFlowTest` uses SQLite; only `Store` itself is tested on the other databases.

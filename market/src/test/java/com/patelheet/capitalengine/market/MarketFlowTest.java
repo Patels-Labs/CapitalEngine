@@ -72,7 +72,7 @@ class MarketFlowTest {
         assertEquals(10, await(svc.stash(mia)).get("iron_ingot")[0]);
         assertEquals(640, svc.store.stock("iron_ingot"), "a fresh server starts with its target stock, so prices start at base");
         svc.store.setStock("iron_ingot", 0);
-        assertEquals("nothing-to-buy", await(svc.quickBuy(mia, "iron_ingot", 1, Long.MAX_VALUE)).error(), "the server only sells what it holds");
+        assertEquals("buy-no-stock", await(svc.quickBuy(mia, "iron_ingot", 1, Long.MAX_VALUE)).error(), "the server only sells what it holds");
     }
 
     @Test void playersTradeWithAFeeAndEscrowStaysExact() throws Exception {
@@ -255,24 +255,61 @@ class MarketFlowTest {
         assertEquals(before + 4_000, bal(sam), "a skipped tutorial pays nothing more");
     }
 
-    @Test void stashWithdrawNeedsAStallUnlessAllowedAnywhere() throws Exception {
+    @Test void stallsArePlacedOnTopWithRoomAboveAndGuardTheStash() throws Exception {
         settle();
-        var stalls = market.stalls();
+        // MockBukkit can't spawn display entities, so the barrel and the rules are tested for real and only the hologram is stubbed
+        var stalls = new Stalls(svc, market.menus()) {
+            @Override void spawnHologram(org.bukkit.block.Block barrel) { }
+            @Override void removeHologram(org.bukkit.block.Block barrel) { }
+        };
         assertFalse(stalls.canWithdraw(samP));
-        var block = samP.getWorld().getBlockAt(samP.getLocation().getBlockX() + 3, samP.getLocation().getBlockY(), samP.getLocation().getBlockZ());
-        assertTrue(stalls.create(block));
+        var world = samP.getWorld();
+        int x = samP.getLocation().getBlockX() + 3, z = samP.getLocation().getBlockZ(), y = samP.getLocation().getBlockY();
+        for (int dy = 0; dy <= 4; dy++) world.getBlockAt(x, y + dy, z).setType(Material.AIR);
+        var ground = world.getBlockAt(x, y, z);
+        ground.setType(Material.SAND);
+
+        world.getBlockAt(x, y + 3, z).setType(Material.STONE);   // not enough room above
+        assertEquals(Stalls.Result.NO_SPACE, stalls.create(ground));
+        assertEquals(Material.AIR, world.getBlockAt(x, y + 1, z).getType(), "nothing is placed when there is no room");
+        world.getBlockAt(x, y + 3, z).setType(Material.AIR);
+
+        assertEquals(Stalls.Result.CREATED, stalls.create(ground));
+        assertEquals(Material.SAND, ground.getType(), "the original block is untouched");
+        var barrel = world.getBlockAt(x, y + 1, z);
+        assertEquals(Material.BARREL, barrel.getType());
+        assertTrue(stalls.isStall(barrel));
+        assertEquals(Stalls.Result.ALREADY, stalls.create(ground));
         assertTrue(stalls.canWithdraw(samP));
-        assertTrue(stalls.remove(block));
+
+        assertEquals(Stalls.Result.REMOVED, stalls.remove(barrel));
+        assertEquals(Material.AIR, barrel.getType());
+        assertEquals(Material.SAND, ground.getType());
+        assertEquals(Stalls.Result.NOT_A_STALL, stalls.remove(ground), "removal never touches a block that isn't a stall");
         assertFalse(stalls.canWithdraw(samP));
     }
 
+    @Test void aSellThatTheBudgetCannotCoverSaysWhyAndShowsCapacity() throws Exception {
+        // a fresh one-player server buys about 60 coins a day, and a diamond's bid is 42: a second diamond sale finds the budget empty
+        await(svc.deposit(sam, "diamond", 10));
+        var info = await(svc.prices(List.of("diamond"))).get("diamond");
+        assertTrue(info.canBuy() >= 1 && info.canBuy() < 10, "capacity is shown: " + info.canBuy());
+        var quote = await(svc.quote(sam, "diamond", 10, false));
+        assertTrue(quote.qty() < 10);
+        assertEquals("budget", quote.reason());
+        var first = await(svc.quickSell(sam, "diamond", 10));
+        assertNull(first.error());
+        assertTrue(first.qty() < 10, "only what the budget covers is bought");
+        var second = await(svc.quickSell(sam, "diamond", 5));
+        assertEquals("sell-budget", second.error(), "and the player is told the budget is why");
+    }
     @Test void menuConfirmScreenSellsOnlyOnYes() throws Exception {
         await(svc.deposit(sam, "iron_ingot", 5));
         samP.getInventory().setItemInMainHand(new ItemStack(Material.IRON_INGOT, 3));
         long before = bal(sam);
         market.menus().item(samP, "iron_ingot");
         settle();
-        samP.simulateInventoryClick(samP.getOpenInventory(), 13);              // "Sell all I have"
+        samP.simulateInventoryClick(samP.getOpenInventory(), Menus.SELL_ALL_SLOT[0]);   // "Sell All"
         settle();
         samP.simulateInventoryClick(samP.getOpenInventory(), 15);              // No
         settle();
@@ -281,7 +318,7 @@ class MarketFlowTest {
 
         market.menus().item(samP, "iron_ingot");
         settle();
-        samP.simulateInventoryClick(samP.getOpenInventory(), 13);
+        samP.simulateInventoryClick(samP.getOpenInventory(), Menus.SELL_ALL_SLOT[0]);
         settle();
         samP.simulateInventoryClick(samP.getOpenInventory(), 11);              // Yes
         settle();

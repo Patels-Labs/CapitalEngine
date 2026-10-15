@@ -81,8 +81,9 @@ final class Simulation {
     // ---- setup -------------------------------------------------------------------------------------------------
 
     /** Writes each plugin's config, messages and price files into its data folder so they never depend on classpath order. */
-    private void prepare(File parent) throws IOException {
-        File ce = new File(parent, "CapitalEngine-1.0.0"), cm = new File(parent, "CapitalMarket-1.0.0");
+    private void prepare(File parent) throws Exception {
+        // MockBukkit names a plugin's data folder <name>-<version>, so read the versions instead of assuming them
+        File ce = new File(parent, "CapitalEngine-" + descriptor("CapitalEngine").getVersion()), cm = new File(parent, "CapitalMarket-" + descriptor("CapitalMarket").getVersion());
         ce.mkdirs(); cm.mkdirs();
         overlay(resource("config.yml", "core"), sc.core(), new File(ce, "config.yml"));
         copy("messages.yml", "core", new File(ce, "messages.yml"));

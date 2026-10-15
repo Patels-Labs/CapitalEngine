@@ -393,6 +393,9 @@ public final class Store implements AutoCloseable {
         return query(sql, rs -> new Job(l(rs, "id"), s(rs, "poster"), s(rs, "item"), (int) l(rs, "qty_total"), (int) l(rs, "qty_done"), l(rs, "pay_unit"), s(rs, "project"), l(rs, "expires"), s(rs, "status"), s(rs, "kind"), s(rs, "assignee"), s(rs, "note")), args);
     }
 
+    /** Whether any server job (project or "the town needs") is open, i.e. whether the jobs share of the budget has a use today. */
+    public boolean anyServerJobOpen() { return one("SELECT COUNT(*) FROM jobs WHERE poster IS NULL AND status='OPEN'") > 0; }
+
     public boolean serverJobOpen(String item) { return one("SELECT COUNT(*) FROM jobs WHERE poster IS NULL AND project IS NULL AND item=? AND status='OPEN'", item) > 0; }
 
     public boolean projectJobExists(String project, String item) { return one("SELECT COUNT(*) FROM jobs WHERE project=? AND item=?", project, item) > 0; }

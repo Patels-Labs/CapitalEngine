@@ -141,6 +141,7 @@ class StoreDialectTest {
         st.insertJob(null, "iron", 5, 60, "railway", 1, 0, "OPEN");
         assertTrue(st.projectJobExists("railway", "iron"));
         assertTrue(st.serverJobOpen("iron") == false, "a project job isn't a 'town needs' job");
+        assertTrue(st.anyServerJobOpen());
 
         // stalls, tutorial, flood stats (the "ignore" and plain upserts)
         var stall = new Store.Stall("world", 1, 2, 3);

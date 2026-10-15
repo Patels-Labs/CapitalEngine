@@ -85,9 +85,21 @@ public final class Items {
         return s == null ? null : keyOf(s);
     }
 
+    /** Plain text for chat and ledger memos: "Iron Ingot", "Enchanted Book (sharpness 5)". */
     public static String pretty(String key) {
         int i = key.indexOf('{');
-        return (i < 0 ? key : key.substring(0, i) + " (" + key.substring(i + 1, key.length() - 1).replace(':', ' ') + ")").replace('_', ' ');
+        String base = i < 0 ? key : key.substring(0, i);
+        StringBuilder sb = new StringBuilder();
+        for (String w : base.split("_")) sb.append(sb.length() == 0 ? "" : " ").append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
+        return i < 0 ? sb.toString() : sb + " (" + key.substring(i + 1, key.length() - 1).replace(':', ' ') + ")";
+    }
+
+    /** The item's name as the player's client shows it (translated, so Bedrock and every language read it naturally). */
+    public static net.kyori.adventure.text.Component name(String key) {
+        Material m = material(key);
+        var base = m == null ? net.kyori.adventure.text.Component.text(pretty(key)) : net.kyori.adventure.text.Component.translatable(m.translationKey());
+        int i = key.indexOf('{');
+        return i < 0 ? base : base.append(net.kyori.adventure.text.Component.text(" (" + key.substring(i + 1, key.length() - 1).replace(':', ' ') + ")"));
     }
 
     public static Material material(String key) { return Material.matchMaterial(key.contains("{") ? key.substring(0, key.indexOf('{')) : key); }

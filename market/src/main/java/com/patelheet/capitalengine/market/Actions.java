@@ -132,7 +132,8 @@ final class Actions {
             int qty = wanted <= 0 ? avail : Math.min(wanted, avail);
             if (qty <= 0) { say(p, "not-enough-items", "have", avail, "item", Items.pretty(key)); return; }
             then(p, svc.quote(p.getUniqueId(), key, qty, false), q -> {
-                if (q.qty() == 0) { say(p, "nothing-to-sell"); return; }
+                if (q.qty() == 0) { say(p, "sell-" + q.reason()); return; }
+                if (q.qty() < qty) say(p, "sell-limited-" + q.reason(), "qty", q.qty(), "wanted", qty);
                 c.ask(p, "confirm-sell", new Object[]{"qty", q.qty(), "item", Items.pretty(key), "total", coins(q.total())}, () -> {
                     int fromInv = Math.min(count(p, key), q.qty());
                     Runnable go = () -> then(p, svc.quickSell(p.getUniqueId(), key, q.qty()), r -> report(p, r, "sold", key, q.qty()));
@@ -144,7 +145,8 @@ final class Actions {
 
     void startBuy(Player p, String key, int qty, Confirm c) {
         then(p, svc.quote(p.getUniqueId(), key, qty, true), q -> {
-            if (q.qty() == 0) { say(p, "nothing-to-buy"); return; }
+            if (q.qty() == 0) { say(p, "buy-no-stock"); return; }
+            if (q.qty() < qty) say(p, "buy-limited", "qty", q.qty(), "wanted", qty);
             c.ask(p, "confirm-buy", new Object[]{"qty", q.qty(), "item", Items.pretty(key), "total", coins(q.total())},
                     () -> then(p, svc.quickBuy(p.getUniqueId(), key, q.qty(), q.total()), r -> report(p, r, "bought", key, q.qty())));
         });
