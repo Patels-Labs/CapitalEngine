@@ -41,6 +41,24 @@ final class Actions {
         };
     }
 
+    /** Topics for {@code /market help <topic>}; each has a "help-<topic>" entry in messages.yml. */
+    static final List<String> HELP_TOPICS = List.of("start", "sell", "buy", "prices", "orders", "stash", "stalls", "jobs", "commands");
+
+    /** Prints the help overview, or one topic. Every topic is also a clickable button, with a typed fallback for Bedrock. */
+    void help(Player p, String topic) {
+        if (topic.isEmpty()) {
+            p.sendMessage(msg.get("help-overview"));
+            p.sendMessage(msg.get("help-topics"));
+            p.sendMessage(msg.get("help-typed"));
+        } else if (HELP_TOPICS.contains(topic)) {
+            p.sendMessage(msg.get("help-" + topic));
+            p.sendMessage(msg.get("help-typed"));
+        } else {
+            p.sendMessage(msg.get("help-unknown", "topic", topic));
+            p.sendMessage(msg.get("help-typed"));
+        }
+    }
+
     // ---- small helpers -----------------------------------------------------------------------------------------
 
     String coins(long n) { return svc.api.currency().format(n); }
