@@ -1,5 +1,6 @@
-# Opens and updates one release PR per module (api, core, market) from the Conventional Commit titles merged to main.
-# Merging a release PR bumps <module>/version.txt, writes <module>/CHANGELOG.md, tags <module>-v<version> and creates the GitHub Release;
+# Keeps one release PR open for every module with releasable changes (api, core, market), built from the Conventional Commit titles
+# merged to main; it grows as more changes merge. Merging it bumps each module's <module>/version.txt, writes <module>/CHANGELOG.md,
+# tags <module>-v<version> and creates one GitHub Release per module;
 # this workflow then calls the module's release workflow to build it and attach the jar (api also stages the public Maven release).
 # Tags made with the default token don't trigger other workflows, which is why those workflows are called from here.
 name: Release
