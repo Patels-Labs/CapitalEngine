@@ -116,6 +116,12 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 - **Java 21 language level.** Records and sealed types are welcome. No Lombok and no Kotlin.
 - **Messages use Adventure/MiniMessage,** and every player-facing string lives in `messages.yml`.
 - **Config uses Bukkit YAML.** No config framework.
+- **Upgrades never overwrite the owner's files.** On every start `FileUpdater` (one copy per plugin) syncs `config.yml` and `messages.yml` with the jar's copy: a file the owner never edited (it still equals the pristine copy in `.defaults/`) is replaced whole, so new wording and defaults arrive; an edited file keeps every line and only gains the keys that are new, with their comments; a file with nothing missing is not touched. `Messages` also falls back to the jar's text for any key missing from the owner's file. So:
+  - every key the code reads must exist in the jar's copy of the file;
+  - write each new top-level `messages.yml` entry on **one line**, so it can be appended unchanged;
+  - never rename or remove a key without keeping the old one working;
+  - a changed default or wording reaches only owners who never edited the file, so if it matters, say so in the PR (it goes into the changelog);
+  - owner data files (`values.yml`, `server-items.yml`, `projects.yml`) are created once and never rewritten.
 - **Storage:**
   - HikariCP plus plain JDBC. Schema migrations are numbered SQL files per dialect (`sqlite`, `mysql`, `postgres`).
   - There's no ORM and no migration framework.

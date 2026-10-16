@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.patelheet.capitalengine.api.CapitalApi;
 import com.patelheet.capitalengine.core.CapitalEnginePlugin;
 import com.patelheet.capitalengine.market.storage.Store;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.UUID;
 import org.bukkit.Material;
@@ -384,5 +385,17 @@ class MarketFlowTest {
         settle();
         String viaMenu = received(samP);
         assertTrue(viaMenu.contains("Market Help"), "the menu button shows the overview in chat; got: " + viaMenu);
+    }
+
+    @Test void anOlderEditedMessagesFileStillWorksAndGainsTheNewEntries() throws Exception {
+        var file = new java.io.File(market.getDataFolder(), "messages.yml");
+        // an owner's file from an earlier version: the prefix is customised and the help entries did not exist yet
+        String old = Files.readAllLines(file.toPath()).stream().filter(l -> !l.startsWith("help-start:")).map(l -> l.startsWith("prefix:") ? "prefix: \"[OWNER] \"" : l)
+                .collect(java.util.stream.Collectors.joining("\n")) + "\n";
+        Files.writeString(file.toPath(), old);
+        var messages = new Messages(market);
+        assertEquals("[OWNER] ", messages.plain("prefix"), "the owner's edit is kept");
+        assertFalse(messages.plain("help-start").contains("Missing message"), "a key the owner's file lacks falls back to the jar's text");
+        assertTrue(Files.readString(file.toPath()).contains("help-start:"), "and is added to the file so the owner can see and edit it");
     }
 }

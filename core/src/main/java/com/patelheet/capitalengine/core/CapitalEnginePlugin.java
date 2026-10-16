@@ -89,7 +89,7 @@ public class CapitalEnginePlugin extends JavaPlugin implements Listener {
     }
 
     private void start() throws Exception {
-        saveDefaultConfig();
+        FileUpdater.sync(this, "config.yml");   // new settings arrive on upgrade; the owner's values are never changed
         msgs = new Messages(this);
         CurrencyImpl currency = CoreConfig.currency(getConfig());
         cfg = CoreConfig.parse(getConfig(), currency);
