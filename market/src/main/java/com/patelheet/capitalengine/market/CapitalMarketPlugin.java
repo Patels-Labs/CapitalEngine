@@ -27,8 +27,8 @@ public class CapitalMarketPlugin extends JavaPlugin implements Listener {
     @Override public void onEnable() {
         CapitalApi api = getServer().getServicesManager().load(CapitalApi.class);
         if (api == null) { getLogger().severe("CapitalEngine's API isn't available."); getServer().getPluginManager().disablePlugin(this); return; }
-        saveDefaultConfig();
-        for (String f : new String[]{"values.yml", "server-items.yml", "projects.yml", "messages.yml"}) if (!new File(getDataFolder(), f).exists()) saveResource(f, false);
+        FileUpdater.sync(this, "config.yml");   // new settings arrive on upgrade; the owner's values are never changed
+        for (String f : new String[]{"values.yml", "server-items.yml", "projects.yml"}) if (!new File(getDataFolder(), f).exists()) saveResource(f, false);   // owner data: created once, never rewritten
         Messages msg = new Messages(this);
         try {
             Store store = openStore();

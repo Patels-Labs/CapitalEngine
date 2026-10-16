@@ -21,8 +21,8 @@ public final class Messages {
     public Messages(JavaPlugin plugin) { this.plugin = plugin; reload(); }
 
     public void reload() {
+        FileUpdater.sync(plugin, "messages.yml");   // adds new entries after an upgrade, never changes what the owner edited
         File f = new File(plugin.getDataFolder(), "messages.yml");
-        if (!f.exists()) plugin.saveResource("messages.yml", false);
         yaml = YamlConfiguration.loadConfiguration(f);
         var in = plugin.getResource("messages.yml");
         if (in != null) yaml.setDefaults(YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8)));
@@ -35,7 +35,8 @@ public final class Messages {
             String name = String.valueOf(kv[i]);
             b.resolver(kv[i + 1] instanceof Component c ? Placeholder.component(name, c) : Placeholder.unparsed(name, String.valueOf(kv[i + 1])));
         }
-        return MM.deserialize(yaml.getString(key, "<red>Missing message: " + key + "</red>"), b.build());
+        String raw = yaml.getString(key);   // no explicit default here, so a key missing from the owner's file falls back to the jar's text
+        return MM.deserialize(raw != null ? raw : "<red>Missing message: " + key + "</red>", b.build());
     }
 
     /** Same, as plain text (for memos that are stored in the ledger). */
