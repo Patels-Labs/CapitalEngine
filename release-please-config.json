@@ -4,7 +4,8 @@
   "include-component-in-tag": true,
   "include-v-in-tag": true,
   "tag-separator": "-",
-  "separate-pull-requests": true,
+  "separate-pull-requests": false,
+  "group-pull-request-title-pattern": "chore(repo): release ${branch}",
   "bump-minor-pre-major": false,
   "pull-request-title-pattern": "chore(repo): release${component} ${version}",
   "changelog-sections": [
