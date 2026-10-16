@@ -2,7 +2,8 @@
 # merged to main; it grows as more changes merge. Merging it bumps each module's <module>/version.txt, writes <module>/CHANGELOG.md,
 # tags <module>-v<version> and creates one GitHub Release per module;
 # this workflow then calls the module's release workflow to build it and attach the jar (api also stages the public Maven release).
-# Tags made with the default token don't trigger other workflows, which is why those workflows are called from here.
+# Tags and pull requests made with the default token don't trigger other workflows, which is why the release workflows are called
+# from here, and why the release PR's own `build` check is produced here too (the ruleset on main requires it).
 name: Release
 on:
   push:
@@ -17,6 +18,7 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
+      pr: ${{ steps.rp.outputs.pr }}
       api_tag: ${{ steps.rp.outputs['api--tag_name'] }}
       core_tag: ${{ steps.rp.outputs['core--tag_name'] }}
       market_tag: ${{ steps.rp.outputs['market--tag_name'] }}
@@ -26,6 +28,34 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+  # Release PRs are opened with the built-in token, so CI never starts for them and the required `build` check would stay missing.
+  # Build the PR's branch here and report the result under that name on the PR's head commit.
+  check-release-pr:
+    needs: release-please
+    if: needs.release-please.outputs.pr != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: "${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}" }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      - id: build
+        run: ./gradlew build
+        continue-on-error: true
+      - name: Report the result as the build check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.build.outcome }}
+        run: |
+          conclusion=failure; [ "$OUTCOME" = "success" ] && conclusion=success
+          gh api "repos/$GITHUB_REPOSITORY/check-runs" -f name=build -f head_sha="$(git rev-parse HEAD)" -f status=completed -f conclusion="$conclusion" \
+            -f "output[title]=Release PR build: $conclusion" -f "output[summary]=./gradlew build on the release PR branch, run by the Release workflow (${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
+          [ "$conclusion" = success ]
   api:
     needs: release-please
     if: needs.release-please.outputs.api_tag != ''
