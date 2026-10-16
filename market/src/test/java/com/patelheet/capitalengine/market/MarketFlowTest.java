@@ -346,4 +346,43 @@ class MarketFlowTest {
         assertNull(got.get());
         assertFalse(a.answer(samP, "5"));
     }
+
+    private String received(PlayerMock p) {
+        StringBuilder sb = new StringBuilder();
+        String m;
+        while ((m = p.nextMessage()) != null) sb.append(m).append('\n');
+        return sb.toString();
+    }
+
+    @Test void everyHelpTopicHasRealTextAndBothTheCommandAndTheMenuButtonShowIt() throws Exception {
+        for (String topic : Actions.HELP_TOPICS) {
+            String text = svc.msg.plain("help-" + topic);
+            assertFalse(text.contains("Missing message"), "help-" + topic + " is missing from messages.yml");
+            assertTrue(text.length() > 80, "help-" + topic + " should say something useful");
+        }
+        for (String key : new String[]{"help-overview", "help-topics", "help-typed", "help-unknown", "btn-help", "lore-help"})
+            assertFalse(svc.msg.plain(key, "topic", "x").contains("Missing message"), key);
+        assertTrue(svc.msg.plain("help-topics").contains("[Getting Started]"), "the topic buttons render: " + svc.msg.plain("help-topics"));
+
+        settle();
+        samP.addAttachment(market, "capitalmarket.use", true);   // MockBukkit does not apply plugin.yml defaults
+        received(samP);
+        samP.performCommand("market help");
+        String overview = received(samP);
+        assertTrue(overview.contains("Market Help"), "overview was: " + overview);
+        samP.performCommand("market help sell");
+        String sell = received(samP);
+        assertTrue(sell.contains("Selling to the Market") && sell.contains("/market help"), "a topic, with the typed fallback; got: " + sell);
+        samP.performCommand("market help nonsense");
+        String bad = received(samP);
+        assertTrue(bad.contains("no help topic"), "got: " + bad);
+
+        market.menus().main(samP);
+        settle();
+        received(samP);
+        samP.simulateInventoryClick(samP.getOpenInventory(), 26);   // the Help book in the corner
+        settle();
+        String viaMenu = received(samP);
+        assertTrue(viaMenu.contains("Market Help"), "the menu button shows the overview in chat; got: " + viaMenu);
+    }
 }

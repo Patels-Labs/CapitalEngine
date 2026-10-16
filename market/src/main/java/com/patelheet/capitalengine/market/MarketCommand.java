@@ -54,6 +54,7 @@ final class MarketCommand implements CommandExecutor, TabCompleter {
         int n = x.length;
         switch (sub) {
             case "" -> menus.main(p);
+            case "help", "?" -> a.help(p, n > 1 ? x[1].toLowerCase() : "");
             case "sell" -> {
                 String key = a.hand(p);
                 if (key == null) return;
@@ -248,7 +249,8 @@ final class MarketCommand implements CommandExecutor, TabCompleter {
 
     @Override public List<String> onTabComplete(CommandSender s, Command cmd, String label, String[] x) {
         if (cmd.getName().equals("market")) {
-            if (x.length == 1) return List.of("sell", "buy", "list", "wanted", "orders", "cancel", "stash", "take", "price", "yes", "tutorial").stream().filter(c -> c.startsWith(x[0].toLowerCase())).toList();
+            if (x.length == 1) return List.of("help", "sell", "buy", "list", "wanted", "orders", "cancel", "stash", "take", "price", "yes", "tutorial").stream().filter(c -> c.startsWith(x[0].toLowerCase())).toList();
+            if (x[0].equalsIgnoreCase("help") && x.length == 2) return Actions.HELP_TOPICS.stream().filter(t -> t.startsWith(x[1].toLowerCase())).toList();
             if (List.of("buy", "wanted", "take", "price").contains(x[0].toLowerCase()) && x.length == 2) return svc.items().stream().filter(i -> i.startsWith(x[1].toLowerCase())).limit(40).toList();
         } else if (cmd.getName().equals("jobs") && x.length == 1) {
             return List.of("list", "post", "build", "deliver", "accept", "done", "problem", "cancel").stream().filter(c -> c.startsWith(x[0].toLowerCase())).toList();

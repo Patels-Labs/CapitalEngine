@@ -54,6 +54,7 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 **The plans are the spec.**
 - If a subproject `Plan.md` disagrees with the root `Plan.md`, the **subproject plan wins**. Fix the root.
 - When an implementation decision changes the design (a new API member, a renamed table, a different default), **update the relevant `Plan.md` in the same change.**
+- **Player documentation stays in step with the code.** Anything a player can see or do (menus, commands, fees, limits, messages) is described in [market/docs/player-guide.md](market/docs/player-guide.md) and in the `help-*` entries of the module's `messages.yml` (`/market help`). When player-facing behaviour changes, update both in the same change. New add-ons get their own `docs/player-guide.md` and in-game help. Write them in the same formal, plain register as the rest of the player text.
 
 ## Target platform
 | | |

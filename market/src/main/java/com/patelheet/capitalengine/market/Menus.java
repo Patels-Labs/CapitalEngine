@@ -66,6 +66,7 @@ final class Menus {
         m.set(s[4], Menu.icon(Material.WRITABLE_BOOK, t("btn-orders"), t("lore-orders")), () -> orders(p));
         m.set(s[5], Menu.icon(Material.LECTERN, t("btn-jobs"), t("lore-jobs")), () -> jobs(p));
         m.set(s[6], Menu.icon(Material.EMERALD, t("btn-economy"), t("lore-economy")), () -> economy(p));
+        m.set(26, Menu.icon(Material.KNOWLEDGE_BOOK, t("btn-help"), t("lore-help")), () -> { p.closeInventory(); a.help(p, ""); });
         m.open(p);
     }
 
