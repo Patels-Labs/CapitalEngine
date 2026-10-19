@@ -39,7 +39,7 @@ jobs:
           fi
           echo "VERSION=$declared" >> "$GITHUB_ENV"
           echo "DRY=${{ inputs.tag == '' || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}" >> "$GITHUB_ENV"
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with: { distribution: temurin, java-version: 21 }
       - uses: gradle/actions/setup-gradle@v6
       - name: Build and test everything (ApiContractTest guards the contract)
