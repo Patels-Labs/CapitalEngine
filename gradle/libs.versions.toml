@@ -2,7 +2,7 @@
 paper = "1.21.11-R0.1-SNAPSHOT"
 vault-unlocked = "2.15"
 hikari = "7.1.0"
-sqlite = "3.53.4.0"
+sqlite = "3.54.1.0"
 papi = "2.12.3"
 postgres = "42.7.14"
 mysql = "9.4.0"
