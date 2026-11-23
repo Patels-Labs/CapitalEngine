@@ -1,0 +1,23 @@
+name: CapitalTrade
+main: com.patelheet.capitalengine.trade.CapitalTradePlugin
+version: ${version}
+api-version: '1.21.11'
+description: Ports where players sell to faraway lands, with daily quotas, Port News and opt-in imports.
+author: Heet Patel
+website: https://patelheet.com
+depend: [CapitalEngine]
+softdepend: [PlaceholderAPI, floodgate, Citizens]
+libraries:
+  - com.zaxxer:HikariCP:7.1.0
+  - org.postgresql:postgresql:42.7.14
+
+commands:
+  trade:
+    description: Sell to faraway lands at a Port
+    aliases: [port]
+    usage: /trade [help|sell|buy|cargo|news|yes]
+    permission: capitaltrade.use
+
+permissions:
+  capitaltrade.use: { description: Use Ports and /trade, default: true }
+  capitaltrade.admin: { description: /trade admin, default: op }
