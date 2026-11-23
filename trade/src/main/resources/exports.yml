@@ -1,0 +1,46 @@
+# What faraway lands buy at a Port. base: the world price in coins (it wanders between half and twice this).
+# quota-per-active-player: how many the ships take each day for every player active today, so a quiet server can't print money.
+# Bases are kept below usual Market prices, so selling to other players stays the better deal most of the time.
+# Only plain items are accepted: no custom names or lore, full durability. This file is yours; upgrades never change it.
+wheat:            { base: 0.8,  quota-per-active-player: 128 }
+carrot:           { base: 0.6,  quota-per-active-player: 128 }
+potato:           { base: 0.6,  quota-per-active-player: 128 }
+beetroot:         { base: 0.6,  quota-per-active-player: 128 }
+pumpkin:          { base: 1.0,  quota-per-active-player: 64 }
+melon_slice:      { base: 0.25, quota-per-active-player: 256 }
+sugar_cane:       { base: 0.5,  quota-per-active-player: 128 }
+apple:            { base: 1.0,  quota-per-active-player: 32 }
+sweet_berries:    { base: 0.4,  quota-per-active-player: 128 }
+cocoa_beans:      { base: 0.8,  quota-per-active-player: 64 }
+kelp:             { base: 0.25, quota-per-active-player: 128 }
+cactus:           { base: 0.3,  quota-per-active-player: 128 }
+bamboo:           { base: 0.2,  quota-per-active-player: 128 }
+oak_log:          { base: 0.8,  quota-per-active-player: 64 }
+spruce_log:       { base: 0.8,  quota-per-active-player: 64 }
+birch_log:        { base: 0.8,  quota-per-active-player: 64 }
+jungle_log:       { base: 0.8,  quota-per-active-player: 64 }
+acacia_log:       { base: 0.8,  quota-per-active-player: 64 }
+dark_oak_log:     { base: 0.8,  quota-per-active-player: 64 }
+coal:             { base: 1.6,  quota-per-active-player: 64 }
+raw_iron:         { base: 2.0,  quota-per-active-player: 32 }
+iron_ingot:       { base: 2.6,  quota-per-active-player: 32 }
+raw_copper:       { base: 0.8,  quota-per-active-player: 64 }
+copper_ingot:     { base: 1.0,  quota-per-active-player: 64 }
+raw_gold:         { base: 3.0,  quota-per-active-player: 16 }
+gold_ingot:       { base: 4.0,  quota-per-active-player: 16 }
+redstone:         { base: 0.8,  quota-per-active-player: 64 }
+lapis_lazuli:     { base: 1.0,  quota-per-active-player: 64 }
+quartz:           { base: 1.6,  quota-per-active-player: 32 }
+white_wool:       { base: 1.0,  quota-per-active-player: 32 }
+leather:          { base: 1.6,  quota-per-active-player: 32 }
+feather:          { base: 0.5,  quota-per-active-player: 64 }
+egg:              { base: 0.4,  quota-per-active-player: 64 }
+string:           { base: 0.8,  quota-per-active-player: 64 }
+bone:             { base: 0.8,  quota-per-active-player: 64 }
+gunpowder:        { base: 1.6,  quota-per-active-player: 32 }
+spider_eye:       { base: 1.0,  quota-per-active-player: 32 }
+rotten_flesh:     { base: 0.15, quota-per-active-player: 128 }
+slime_ball:       { base: 2.6,  quota-per-active-player: 16 }
+ender_pearl:      { base: 6.0,  quota-per-active-player: 8 }
+cod:              { base: 1.0,  quota-per-active-player: 32 }
+salmon:           { base: 1.3,  quota-per-active-player: 32 }

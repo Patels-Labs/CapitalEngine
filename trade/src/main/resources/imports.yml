@@ -1,0 +1,7 @@
+# Items players may buy from abroad at a Port. Empty means imports are off and the Import tab is hidden.
+# This is the one place the server creates items, so list only what your world lacks (an old map without cherry trees, sponges, ...).
+# base: the world price in coins. tariff: the share added on top, which goes to the Treasury; the rest of the price leaves the economy.
+# Example:
+#   sponge:     { base: 40, quota-per-active-player: 1, tariff: 0.25 }
+#   cherry_log: { base: 3,  quota-per-active-player: 32, tariff: 0.25 }
+{}

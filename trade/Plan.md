@@ -3,6 +3,29 @@
 > **Artifact:** `CapitalTrade.jar` (optional add-on) · **Depends on:** CapitalEngine ([../core/Plan.md](../core/Plan.md)) via [../api/Plan.md](../api/Plan.md)
 > **Parent plan:** [../Plan.md](../Plan.md) · **Works with or without** [CapitalMarket](../market/Plan.md)
 
+## 0. Build status
+**Built and tested** (`./gradlew :trade:test`: 16 tests, 5 pure-logic and 11 MockBukkit integration tests with the real CapitalEngine). Not yet done: the real-server smoke test on 1.21.11 and 26.x, joining once through Geyser, a check with real Citizens NPCs, the MySQL and PostgreSQL migrations against real servers (only SQLite is exercised), and `sim` scenarios for Trade (needed for "Done when" item 2). Not covered by a test: an export that core refuses with `POLICY_LIMIT` (quotes already stay inside core's cap, so it can't be provoked), and a commit that is still running after 30 seconds. The jar builds as `CapitalTrade-0.0.0.jar` until Release Please adds `trade/version.txt`.
+
+**What exists:** Ports (block and NPC), the Port menu (Export, Import when configured, Port News, Cargo), exports paid with `issue` inside the quota, the daily budget and core's cap, opt-in imports (tariff to the Treasury, the rest destroyed), Cargo, the daily world-price walk, weekly booms with Port News, crash recovery of `PENDING` shipments, the `capitaltrade` IndicatorProvider, PlaceholderAPI, `/trade help` and [docs/player-guide.md](docs/player-guide.md).
+
+**Decisions made while building** (the sections below are updated to match):
+- **Fewer classes.** `Exports`, `Imports`, `Cargo` and `TradeIndicators` are folded into `TradeService`, which runs everything on one worker thread (as Market does), so quotas need no per-item lock. The pure maths for both directions is `port/Slide`.
+- **Totals are differences of one rounded cumulative function**, so selling in stacks pays exactly what selling at once does. Exports round down, imports round up, and `tariff + destroyed = total` exactly.
+- **Items always come back through Cargo.** The service never touches inventories: the caller takes the items first, and anything not exported (over the quota or budget, a failed payment, an unpaid shipment found at startup) and every import goes into Cargo in the same database transaction that settles the shipment. The caller then collects Cargo into the inventory; if the player has logged off by then, the items go back into Cargo. A crash can still lose items in two brief moments, both marked `ponytail:`: between taking them from the inventory and the worker writing the shipment, and between emptying Cargo and giving the items. Because of this the simulator can call `export`/`importItems` directly; no separate test hook is needed.
+- **An unclear commit is resolved with `findByReference`** before anything is handed back, so items are never returned after their coins were paid. A commit still running after 30 seconds leaves the shipment `PENDING` ("The ships are taking longer than usual") and is settled when it completes. Startup is the only time every `PENDING` row is settled; `/trade admin reload` doesn't touch them.
+- **A catch-up Week event ends last week's boom** without starting a new one.
+- **No `quota_used` table.** Today's quota use and coins are summed from `shipments` (which gained a `day` column), counting `PENDING` rows so a slow commit can't be sold twice, and cached in memory per day.
+- **`world_price` keeps one row per item** (today's price, yesterday's for ▲/▼, and the day it last moved) instead of a full history. The walk moves at most once per day index, so repeated or catch-up Day events can't double-step it.
+- **Quota players** = `max(1, activePlayersToday, yesterday's activePlayersToday)`. Yesterday's comes from the last Day event, or from `avgActivePlayers7d` after a restart.
+- **The export budget** is the smallest of `exports.daily-budget`, `monetaryPolicy.budget("exports")` (CapitalMarket answers empty, so it has no effect today) and core's `issueRemainingToday`. Quotes already respect core's cap, so `POLICY_LIMIT` is a fallback that still returns the items.
+- **Block Ports are a barrel with a hologram**, made the same way as Market stalls, instead of a `[Port]` sign (players can edit signs).
+- **NPC Ports don't use the Citizens API.** Any entity an administrator looks at (a Citizens NPC, a named villager) becomes a Port, recognised by its UUID on right-click, so no new dependency was needed. It hasn't been tried with real Citizens yet, and an NPC moved after its Port was made needs the Port made again (the "near a Port" check uses where it stood).
+- **Port News is printed in chat** (the menu button and `/trade news`) rather than shown as a menu page, so every client sees all of it.
+- **`importItems` takes `maxTotal`**, the price the player agreed to, like Market's `quickBuy`. `quotaLeft` returns a future.
+- Ports are removed by name (`/trade admin port remove <name>`).
+
+**Left for later:** a `sim` scenario with Market plus Trade (arbitrage); a `trade` entry in `release-please-config.json` and `.release-please-manifest.json` before the first release (repo files, not this module's); a Port keeper that follows a moved Citizens NPC.
+
 ## 1. Purpose and scope
 CapitalTrade adds an NPC **world market** at **Ports**, so the server behaves like a small country trading with the rest of the world. It's a sell shop done right:
 - **Exports.** Players sell items to "faraway lands".
@@ -30,18 +53,20 @@ CapitalTrade adds an NPC **world market** at **Ports**, so the server behaves li
 ```
 com.patelheet.capitalengine.trade
 ├─ CapitalTradePlugin
-├─ TradeService            public façade for GUI, commands, simulator (§5.6)
+├─ TradeService            public façade for GUI, commands, simulator (§5.6): exports, imports, Cargo,
+│                          day/week handling, and the IndicatorProvider "capitaltrade" (§5.7)
 ├─ world/
 │  ├─ WorldPrices          daily mean-reverting random walk per item              (pure Java)
 │  └─ Booms                weekly random demand boom                            (pure Java)
 ├─ port/
-│  ├─ Exports              quote / sell with quota slide
-│  ├─ Imports              quote / buy with tariff + quota slide
-│  ├─ Ports                port locations (block/sign/NPC), "at a port" check
-│  └─ Cargo                per-player holding for imported items if inventory is full
-├─ TradeIndicators         IndicatorProvider "capitaltrade"
-├─ gui/                    PortMenu (Export tab, Import tab, Port News)
-└─ storage/                own DB, migrations
+│  └─ Slide                quotas, the export and import price slide, tariff split (pure Java)
+├─ Ports                   port locations (barrel block or NPC entity), "at a port" check
+├─ Actions, Menus, Menu    what a player does; the Port menu (Export, Import, Port News, Cargo)
+├─ TradeCommand            /trade
+├─ TradeForms              Floodgate forms (the only class that touches Floodgate)
+├─ TradeExpansion          PlaceholderAPI
+├─ Items, Messages, FileUpdater   small copies of Market's, since add-ons share no code
+└─ storage/Store           own DB, migrations in trade-db/<dialect>/
 ```
 
 ## 5. How it works
@@ -73,52 +98,58 @@ p clamped to [0.5×base, 2×base]
   - It's announced as Port News: *"⚓ Port News: Faraway lands want PUMPKINS this week! Prices are up 30% at the Port."*
 
 ### 5.3 Exports
-- **Today's quota per item** is `quota-per-active-player × max(1, stats().activePlayersToday)`, using yesterday's figure if today's is still small. **A quiet server gets a small quota, so it can't print money for nobody.**
+- **Today's quota per item** is `quota-per-active-player × max(1, stats().activePlayersToday, yesterday's activePlayersToday)`: yesterday's figure is used while today's is still smaller (after a restart, the 7-day average stands in for yesterday). **A quiet server gets a small quota, so it can't print money for nobody.**
 - **Price slides as the quota fills.** Selling `q` units when `u` have already been exported today:
   ```
   unit price at fill level x = p × (1 − k · x/quota)        k = 0.5   (at a full quota the price is half)
-  total = ∫ from u to u+q of that   (computed per stack for display)
+  total = cum(u+q) − cum(u),   cum(x) = ⌊p·(x − k·x²/(2·quota))⌋   (the integral, rounded once, so stacks add up exactly)
   ```
   The amount that can be exported is capped at the quota remaining. The GUI shows "Ships can take 340 more wheat today".
 - **Flow** (one transaction, at a Port):
-  1. Remove the items from the player's inventory and write a `PENDING` row.
+  1. Remove the items from the player's inventory. On the worker, re-quote, then write a `PENDING` row and put any surplus the ships can't take into Cargo, in one database transaction.
   2. `transaction("trade.export", "Sold 64 wheat to faraway lands").issue(player, total).reference("exp:<id>")`.
   3. If it succeeds, mark it `DONE`. The items are **gone**, because they were exported.
-     If it fails, return the items and show a plain message, for example "The ships are full for today!" for `POLICY_LIMIT`.
-  4. Startup recovery uses `findByReference`, the same pattern as Market.
+     If it fails, mark it `FAILED` and put the items in Cargo in the same transaction, and show a plain message, for example "The ships are full for today!" for `POLICY_LIMIT`. Cargo is then collected straight into the inventory.
+  4. Startup recovery uses `findByReference`, the same pattern as Market: a paid row is finished, an unpaid one hands its items back through Cargo.
 - **Why `issue` and not `serverPay`:** export money really is new money entering the server from outside. It must not drain the Treasury that pays for jobs and interest. Core's `issue-per-day` cap for CapitalTrade is the owner's hard limit.
-- **Daily export budget:** the smaller of `monetaryPolicy.budget("exports")` (if any provider answers) and `exports.daily-budget` from config. Once it's used up, exports close until tomorrow.
+- **Daily export budget:** the smallest of `monetaryPolicy.budget("exports")` (if any provider answers), `exports.daily-budget` from config, and core's remaining `issue-per-day` for CapitalTrade. Quotes sell only what the budget covers; once it's used up, exports close until tomorrow.
 
 ### 5.4 Imports
 - **Quota:** the same per-active-player rule as exports.
 - **Price rises as the quota fills:**
   ```
   unit price = p × (1 + tariff) × (1 + k · x/quota)
+  total = cum(u+q) − cum(u),   cum(x) = ⌈p·(1+tariff)·(x + k·x²/(2·quota))⌉
+  tariffPart = ⌊total × tariff/(1+tariff)⌋,   restPart = total − tariffPart
   ```
 - **Flow** (one transaction):
   - `transaction("trade.import", "Bought 1 sponge from abroad")`
-  - `.move(player → Treasury, tariffPart)`: the tariff stays in the server as government income.
+  - `.move(player → Treasury, tariffPart)`: the tariff stays in the server as government income (skipped when it's 0).
   - `.destroy(player, restPart)`: the rest is paid to foreigners and leaves the economy.
   - `.reference("imp:<id>")`
-- **Delivery:** the items go to the player's inventory. If it's full, they go to the player's **Cargo** (collect at any Port).
+  - The player agreed to a price; if the quote has risen above it, nothing happens ("The price has changed").
+- **Delivery:** on success the row is marked `DONE` and the items go into **Cargo** in the same transaction, then straight into the inventory. Whatever doesn't fit stays in Cargo (collect at any Port).
 - **Off by default.** If `imports.yml` is empty, the Import tab is hidden.
 
 ### 5.5 Ports
-- **Creating a Port:** `/trade admin port create [name]` while looking at a block (it adds a `[Port]` sign), or on a Citizens NPC (adds a Port trait).
+- **Creating a Port:** `/trade admin port create [name]` while looking at a block (a barrel with a floating "⚓ Port" sign is placed on top, like a Market stall; it needs three clear blocks above), or at an entity such as a Citizens NPC (recognised by its UUID; no Citizens API is used).
 - **Using a Port:** the Port GUI opens when right-clicking a Port, or with `/trade` within `ports.radius` (8 blocks) of one.
   - With `ports.anywhere: true`, `/trade` works everywhere. That's off by default, so Ports are destinations, like harbours.
 - **The GUI** has three tabs:
   - **Export:** items with ▲/▼ world price, "ships can take N more today", and a Sell button with 1 / 16 / 64 / All.
   - **Import:** shown only if any imports are configured.
-  - **Port News:** this week's boom, and today's busiest exports.
+  - **Port News:** this week's boom, and today's busiest exports (printed in chat, so every client shows all of it).
+  - **Cargo:** collects anything waiting.
 
 ### 5.6 `TradeService` (public façade)
 ```java
-Quote quoteExport(ItemKey k, int qty);  CompletableFuture<TradeResult> export(UUID p, ItemKey k, int qty);  // from inventory (or test hook)
-Quote quoteImport(ItemKey k, int qty);  CompletableFuture<TradeResult> importItems(UUID p, ItemKey k, int qty);
-double worldPrice(ItemKey k);  int quotaLeft(ItemKey k, boolean export);
+CompletableFuture<Quote> quoteExport(String item, int qty);  CompletableFuture<TradeResult> export(UUID p, String item, int qty);
+CompletableFuture<Quote> quoteImport(String item, int qty);  CompletableFuture<TradeResult> importItems(UUID p, String item, int qty, long maxTotal);
+double worldPrice(String item);  CompletableFuture<Long> quotaLeft(String item, boolean export);
+CompletableFuture<Map<String,Integer>> takeCargo(UUID p);  CompletableFuture<List<Component>> news();
+void onDay(Stats ended, long newDay, boolean catchUp);  void onWeek(long week, boolean catchUp);  CompletableFuture<Void> idle();
 ```
-The simulator uses `export`/`importItems` with a test hook that skips the inventory, available only under core's simulator system property.
+Items are plain item keys, in the same format as Market's. The service never touches inventories: `export` expects the caller to have taken the items already, and anything it doesn't export goes to Cargo. So the simulator calls `export`/`importItems` directly (through `CapitalTradePlugin.service()`), with no separate hook.
 
 ### 5.7 Indicators (`IndicatorProvider` id `capitaltrade`)
 Cached and refreshed after every trade (cheap counters) and at each Day event:
@@ -130,13 +161,13 @@ Cached and refreshed after every trade (cheap counters) and at each Day event:
 
 ## 6. Data (own database, `plugins/CapitalTrade/trade.db` by default)
 ```
-world_price  (item_key, day_index, price, PK(item_key, day_index))
-quota_used   (item_key, day_index, direction EXPORT|IMPORT, qty, PK(item_key, day_index, direction))
-shipments    (id PK, uuid, item_key, direction, qty, total, tariff NULL, ts, status PENDING|DONE|FAILED)
-booms        (week_index PK, item_key, multiplier)
-ports        (id PK, name, world, x, y, z, kind SIGN|NPC, npc_id NULL)
-cargo        (uuid, item_key, qty, PK(uuid, item_key))
+world_price  (item PK, day, price, prev)          one row per item: today's price and yesterday's
+shipments    (id PK, uuid, item, direction EXPORT|IMPORT, qty, total, tariff, day, ts, status PENDING|DONE|FAILED)
+booms        (week PK, item, multiplier)
+ports        (id PK, name UNIQUE, world, x, y, z, kind BLOCK|NPC, npc_id NULL)
+cargo        (uuid, item, qty, PK(uuid, item))
 ```
+Today's quota use is summed from `shipments` (the day's PENDING and DONE rows), so there's no separate `quota_used` table. MySQL and PostgreSQL tables take a `prefix` (default `trade_`).
 
 ## 7. Config (abridged)
 ```yaml
@@ -154,6 +185,8 @@ Other files: `exports.yml`, `imports.yml`, `messages.yml`.
 | Command | Permission (default) | What |
 |---|---|---|
 | `/trade` | `capitaltrade.use` (all) | Port GUI (near a Port, unless `anywhere`) |
+| `/trade sell [amount\|all]`, `/trade buy <item> <amount>`, `/trade yes` | `capitaltrade.use` | Export the held item, import, confirm (typed fallbacks for the menu) |
+| `/trade news`, `/trade help [topic]` | `capitaltrade.use` | Port News; in-game help |
 | `/trade cargo` | `capitaltrade.use` | Collect imported items held for you |
 | `/trade admin port create\|remove\|list` | `capitaltrade.admin` (op) | Manage Ports |
 | `/trade admin boom <item> [x]` | op | Start a boom now (for events) |
@@ -164,10 +197,10 @@ PlaceholderAPI: `%capitaltrade_price_<item>%`, `%capitaltrade_quota_<item>%`, `%
 ## 9. Threading and failure handling
 - **Inventory changes and GUIs:** main/player thread.
 - **Money:** async API calls. The result switches back to the player's thread to finish or roll back.
-- **Quotas** update in memory under one lock per item, and persist with the shipment.
+- **Quotas** update in memory on the one worker thread (no locks needed), and persist with the shipment.
 - **On `POLICY_LIMIT` or a used-up budget:** "The ships are full for today! Try the Market."
 - **On `ECONOMY_PAUSED`:** "The Port is closed for a moment."
-- **The items always go back.**
+- **The items always go back,** through Cargo, written in the same database transaction as the shipment's status.
 
 ## 10. Tests
 - **Unit tests** (pure Java):
@@ -181,6 +214,9 @@ PlaceholderAPI: `%capitaltrade_price_<item>%`, `%capitaltrade_quota_<item>%`, `%
   - `POLICY_LIMIT` returns the items
   - crash after `PENDING` recovers by reference
   - the Import tab is hidden when `imports.yml` is empty
+  - quotas grow with active players, and a full quota prints nothing
+  - exports stay inside core's `issue-per-day` cap and hand back what it can't cover
+  - Port News announces a boom, catch-up weeks never start one, and the price walk moves once per day
 
 ## 11. Done when
 - [ ] On a 2-player server, exports pay a fair-but-low price, quotas stop money printing, and Port News booms are visible.
