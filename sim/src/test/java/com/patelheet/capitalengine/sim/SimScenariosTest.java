@@ -60,6 +60,9 @@ class SimScenariosTest {
         assertTrue(r.passed(), r.failures().toString());
         double most = r.rows().stream().filter(x -> x[0] >= 30).mapToDouble(x -> x[24]).max().orElseThrow();
         assertTrue(most < 4 * 640, "\"the town needs\" jobs use up the server's extra wheat (stock " + most + "; it reached about 12x the 640 target before they did)");
+        // the 2% daily use-up keeps all server stock levelling off (7339 items on day 70); without it stock keeps climbing (13850)
+        double stock = r.rows().get(r.rows().size() - 1)[Simulation.SERVER_STOCK];
+        assertTrue(stock < 4 * 4 * 640, "server stock of the four items stays under 4x their targets: " + stock);
         assertTrue(week(r, 64) >= week(r, 23) * 0.9, "wheat is back within 10% of its old price 4 weeks after the flood ends: " + week(r, 64) + " vs " + week(r, 23));
     }
 

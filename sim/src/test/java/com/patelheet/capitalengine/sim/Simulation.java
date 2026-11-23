@@ -50,12 +50,12 @@ final class Simulation {
             "active_players", "price_index", "weekly_inflation", "savings_rate_week", "spread", "player_trade_share", "stock_value", "new_money_policy",
             "buyer_budget", "jobs_budget", "gini", "median_balance", "p90_balance", "unmet_needs", "iron_ask", "wheat_ask", "wheat_stock",
             "savings", "loan_book", "interest_paid", "upkeep_collected", "loans_overdue", "loans_written_off", "exports", "imports", "tariffs",
-            "watch_best_ask", "watch_bid", "watch_world", "watch_exported");
+            "watch_best_ask", "watch_bid", "watch_world", "watch_exported", "server_stock");
 
     /** Column numbers the checks and tests read. */
     static final int MONEY = 1, TREASURY = 3, INFLATION = 10, TRADE_SHARE = 13, UNMET = 21, WHEAT_ASK = 23, WHEAT_STOCK = 24, SAVINGS = 25, LOAN_BOOK = 26,
             INTEREST = 27, UPKEEP = 28, OVERDUE = 29, WRITTEN_OFF = 30, EXPORTS = 31, IMPORTS = 32, TARIFFS = 33, WATCH_BEST_ASK = 34, WATCH_BID = 35,
-            WATCH_WORLD = 36, WATCH_EXPORTED = 37;
+            WATCH_WORLD = 36, WATCH_EXPORTED = 37, SERVER_STOCK = 38;
 
     record Result(Scenario scenario, List<double[]> rows, List<String> failures, String csv, Map<String, Integer> whyUnmet, List<String> items) {
         boolean passed() { return failures.isEmpty(); }
@@ -137,9 +137,14 @@ final class Simulation {
         if (sc.has("trade")) {
             File ct = folder(parent, "CapitalTrade");
             overlay(resource("config.yml", "trade"), sc.trade(), new File(ct, "config.yml"));
-            for (String f : List.of("messages.yml", "exports.yml")) copy(f, "trade", new File(ct, f));
+            copy("messages.yml", "trade", new File(ct, "messages.yml"));
+            YamlConfiguration exports;   // sim.export-quota-scale tries other quotas without editing the shipped list
+            try (var in = resource("exports.yml", "trade").openStream()) { exports = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(in, StandardCharsets.UTF_8)); }
+            double qs = num("sim.export-quota-scale", 1);
+            for (String item : exports.getKeys(false)) exports.set(item + ".quota-per-active-player", Math.max(1, Math.round(exports.getLong(item + ".quota-per-active-player") * qs)));
+            exports.save(new File(ct, "exports.yml"));
             YamlConfiguration imports = new YamlConfiguration();   // off unless the scenario lists some (and sim.imports isn't false)
-            if (!Boolean.FALSE.equals(sc.config().get("sim.imports"))) sc.imports().forEach((k, v) -> { if (!(v instanceof org.bukkit.configuration.ConfigurationSection)) imports.set(k, v); });
+            if (!"false".equals(String.valueOf(sc.config().get("sim.imports")))) sc.imports().forEach((k, v) -> { if (!(v instanceof org.bukkit.configuration.ConfigurationSection)) imports.set(k, v); });
             imports.save(new File(ct, "imports.yml"));
         }
     }
@@ -184,7 +189,7 @@ final class Simulation {
 
     private Result loop(AuditLog audits) throws Exception {
         List<Agent> agents = new ArrayList<>();
-        List<String> catalog = sc.production().values().stream().flatMap(m -> m.keySet().stream()).distinct().sorted().toList();
+        catalog = sc.production().values().stream().flatMap(m -> m.keySet().stream()).distinct().sorted().toList();
         double spend = num("sim.spend-share", 0.6), reliability = num("sim.borrower-reliability", 0.9), landScale = num("sim.land-scale", 1);
         watch = (String) sc.config().getOrDefault("sim.watch", "wheat");
         Map<UUID, Long> land = new HashMap<>();
@@ -313,6 +318,8 @@ final class Simulation {
         return new long[]{sum, negatives};
     }
 
+    private List<String> catalog;
+
     private double[] capture(int day, com.patelheet.capitalengine.api.Stats st, List<Agent> agents, Map<String, Double> tr) {
         var ind = indicators("capitalmarket");
         var bk = indicators("capitalbank");
@@ -333,7 +340,8 @@ final class Simulation {
                 bk.getOrDefault("total_savings", 0.0), bk.getOrDefault("loan_book", 0.0), bk.getOrDefault("interest_paid_today", 0.0), bk.getOrDefault("upkeep_collected_today", 0.0),
                 bk.getOrDefault("loans_overdue", 0.0), bk.getOrDefault("loans_written_off", 0.0), tr.getOrDefault("exports_value_today", 0.0), tr.getOrDefault("imports_value_today", 0.0),
                 tr.getOrDefault("tariffs_today", 0.0), asks.isEmpty() ? 0 : asks.get(0).price(), w == null ? 0 : w.bid(),
-                trade == null ? 0 : Math.round(trade.worldPrice(watch) * Math.pow(10, api.currency().decimals())), exported};
+                trade == null ? 0 : Math.round(trade.worldPrice(watch) * Math.pow(10, api.currency().decimals())), exported,
+                get2(svc.prices(catalog)).values().stream().mapToLong(x -> x.stock()).sum()};
     }
 
     private static <T> T get2(java.util.concurrent.CompletableFuture<T> f) { try { return get(f); } catch (Exception e) { throw new IllegalStateException(e); } }
