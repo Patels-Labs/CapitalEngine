@@ -122,7 +122,7 @@ final class Actions {
         int want = Math.min(qty, count(p, key));
         if (want == 0) { next.run(); return; }
         UUID id = p.getUniqueId();
-        svc.holdIn(id, key, want).whenComplete((ok, e) -> p.getScheduler().run(plugin, t -> {
+        svc.holdIn(id, key, want).whenComplete((ok, e) -> onPlayer(p, () -> {
             if (e != null) { say(p, "err-other"); return; }
             if (!ok) { say(p, "stash-full"); return; }
             int got = take(p, key, want);
@@ -134,7 +134,7 @@ final class Actions {
     void withdraw(Player p, String key, int qty, Runnable after) {
         if (!stalls.canWithdraw(p)) { say(p, "need-stall"); return; }
         UUID id = p.getUniqueId();
-        svc.holdOut(id, key, qty).whenComplete((n, e) -> p.getScheduler().run(plugin, t -> {
+        svc.holdOut(id, key, qty).whenComplete((n, e) -> onPlayer(p, () -> {
             if (e != null) { say(p, "err-other"); return; }
             if (n == 0) { say(p, "nothing-taken"); return; }
             int given = n - give(p, key, n);   // a full inventory leaves the rest in the Stash
@@ -142,6 +142,11 @@ final class Actions {
             say(p, "taken", "qty", given, "item", Items.pretty(key));
             after.run();
         }, () -> { if (n != null && n > 0) svc.settle(id, key, n, 0); }));   // logged off first: nothing was given
+    }
+
+    /** Runs {@code r} on the player's thread, or {@code gone} if they log off first, whether before or after it was queued. */
+    private void onPlayer(Player p, Runnable r, Runnable gone) {
+        if (p.getScheduler().run(plugin, t -> r.run(), gone) == null) gone.run();
     }
 
     // ---- trading -----------------------------------------------------------------------------------------------

@@ -318,6 +318,14 @@ class MarketFlowTest {
         assertEquals(0, await(svc.free(sam, "gold_ingot")), "held items can't be sold yet");
         await(svc.recover());
         assertEquals(5, await(svc.free(sam, "gold_ingot")));
+
+        // logging off mid-move: the 3 diamonds end up in the bag or the Stash, never both and never neither
+        samP.getInventory().addItem(new ItemStack(Material.DIAMOND, 3));
+        a.deposit(samP, "diamond", 3, () -> { });
+        samP.disconnect();
+        settle();
+        await(svc.recover());
+        assertEquals(3, a.count(samP, "diamond") + await(svc.stash(sam)).getOrDefault("diamond", new int[]{0, 0})[0]);
     }
 
     @Test void tutorialPaysEachStepOnceAndInOrder() throws Exception {
