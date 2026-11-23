@@ -14,7 +14,6 @@ commands:
   cdash:
     description: Economy dashboard for owners and staff
     usage: /cdash [alerts [ack <id|all>]|plugins|web|reload]
-    permission: capitaldash.view
 
 permissions:
   capitaldash.view: { description: /cdash and /cdash plugins, default: op }

@@ -57,6 +57,7 @@ class DashboardFlowTest {
         dash = MockBukkit.loadWith(CapitalDashboardPlugin.class, descriptor("CapitalDashboard"));
         jobs = MockBukkit.createMockPlugin("Jobs");
         server.getScheduler().performTicks(2);
+        await(dash.snapshotNow());   // the worker is FIFO: this waits for the startup snapshot the ticks above queued, so it can't land inside a test
     }
 
     @AfterEach void stop() { MockBukkit.unmock(); }
@@ -202,7 +203,17 @@ class DashboardFlowTest {
         PlayerMock kid = server.addPlayer("Kid");
         kid.performCommand("cdash");
         drain();
-        assertTrue(messages(kid).stream().anyMatch(l -> l.contains("permission")));
+        assertTrue(messages(kid).stream().anyMatch(l -> l.equals("[Economy] You do not have permission to do that.")));
+
+        // a moderator given only capitaldash.alerts can use /cdash alerts but not the summary
+        PlayerMock mod = server.addPlayer("Mod");
+        mod.addAttachment(dash, "capitaldash.alerts", true);
+        mod.performCommand("cdash alerts");
+        drain();
+        assertTrue(messages(mod).stream().anyMatch(l -> l.contains("no open alerts")));
+        mod.performCommand("cdash");
+        drain();
+        assertTrue(messages(mod).stream().anyMatch(l -> l.contains("You do not have permission")));
     }
 
     @Test void webIsOffAndLocalByDefaultAndServesTheSummaryWithASession() throws Exception {

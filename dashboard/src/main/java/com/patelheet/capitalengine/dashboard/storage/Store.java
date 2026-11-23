@@ -193,6 +193,7 @@ public final class Store implements AutoCloseable {
                 + step("h1", "d1", Downsampler.align(now - Downsampler.KEEP_H1, Downsampler.D1), Downsampler.D1);
     }
 
+    // ponytail: a step loads every point it moves into memory (about a day of 5-minute points per metric at a time); page it by metric if a server has thousands of metrics
     private int step(String from, String to, long cutoff, long bucket) {
         return tx(c -> {
             List<Point> old = query(c, "SELECT metric, ts, value FROM snapshots WHERE res=? AND ts<?", Store::point, from, cutoff);
@@ -285,7 +286,7 @@ public final class Store implements AutoCloseable {
     public void bumpAlert(long id, long ts, String message) { exec("UPDATE alerts SET hits = hits + 1, last_ts=?, message=? WHERE id=?", ts, message, id); }
 
     public List<Alert> alerts(boolean openOnly, int limit) {
-        return query("SELECT * FROM alerts" + (openOnly ? " WHERE acked_by IS NULL" : "") + " ORDER BY last_ts DESC, id DESC", Store::alert).stream().limit(limit).toList();
+        return query("SELECT * FROM alerts" + (openOnly ? " WHERE acked_by IS NULL" : "") + " ORDER BY last_ts DESC, id DESC LIMIT ?", Store::alert, limit);
     }
 
     public Alert alert(long id) { return query("SELECT * FROM alerts WHERE id=?", Store::alert, id).stream().findFirst().orElse(null); }

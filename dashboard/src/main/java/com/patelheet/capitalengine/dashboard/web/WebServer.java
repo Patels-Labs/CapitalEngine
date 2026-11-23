@@ -123,6 +123,7 @@ public final class WebServer {
     }
 
     private void login(HttpExchange ex, Map<String, String> q) throws IOException {
+        // ponytail: behind a reverse proxy every visitor has the proxy's address and shares one failure limit; trust X-Forwarded-For from a configured proxy if that ever bites
         Auth.Login r = auth.login(q.get("code"), ex.getRemoteAddress().getAddress().getHostAddress());   // never a forwarded header: it can be forged
         switch (r.status()) {
             case OK -> {

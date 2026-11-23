@@ -111,6 +111,7 @@ public class CapitalDashboardPlugin extends JavaPlugin implements Listener {
         inbox.dedupeMs(Math.max(0, c.getLong("alerts.dedupe-minutes", 60)) * 60_000L);
         notifier.configure(severity(c.getString("alerts.staff-min-severity")), c.getString("alerts.discord.webhook", ""), severity(c.getString("alerts.discord.min-severity")));
 
+        // ponytail: points are stored as "m5" whatever the interval; the charts don't care, only downsampling ages do
         snapshotMs = Math.max(1, c.getLong("snapshot-minutes", 5)) * 60_000L;
 
         if (web != null) { web.stop(); web = null; }
@@ -186,6 +187,7 @@ public class CapitalDashboardPlugin extends JavaPlugin implements Listener {
         Set<String> ids = new java.util.HashSet<>();
         for (var reg : getServer().getServicesManager().getRegistrations(IndicatorProvider.class)) {
             IndicatorProvider p = reg.getProvider();
+            // ponytail: a provider that hangs keeps its pool thread after we stop waiting (cancel can't interrupt it); fine for a few add-ons, give each provider one thread if one ever hangs for good
             var f = CompletableFuture.supplyAsync(() -> new Snapshot.Reading(p.id(), p.displayName(), List.copyOf(p.indicators())), providerPool);
             try {
                 Snapshot.Reading r = f.get(100, TimeUnit.MILLISECONDS);
