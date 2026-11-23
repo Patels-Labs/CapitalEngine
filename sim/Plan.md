@@ -194,7 +194,7 @@ The simulator *is* a test, and it also checks itself:
 ## 11. Done when
 - [x] All seven bundled scenarios run, and the CI scenarios pass in under 2 minutes.
 - [x] Repeated runs with the same seed are identical.
-- [x] The default config values in market, bank and trade are justified by sweep results, recorded in `sim/RESULTS.md`.
+- [ ] The default config values in market, bank and trade are justified by sweep results, recorded in `sim/RESULTS.md`. *Partly:* the settings that move money (the floor, the export budget and quotas, upkeep, interest, loan start limit, rates, the market maker and fee) are swept; the rest are listed under "Not swept" there.
 - [x] A regression, such as removing the stock use-up, fails `:sim:test`.
 
 ## 12. Open questions
