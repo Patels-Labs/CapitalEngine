@@ -83,7 +83,7 @@ public final class TradeService implements AutoCloseable, IndicatorProvider {
                 cfg.getDouble("world-prices.min-x", 0.5), cfg.getDouble("world-prices.max-x", 2.0), cfg.getLong("world-prices.seed", 12345));
         exportK = cfg.getDouble("exports.slide-k", 0.5);
         importK = cfg.getDouble("imports.slide-k", 0.5);
-        dailyBudget = api.currency().parse(cfg.getString("exports.daily-budget", "5000"));
+        dailyBudget = api.currency().parse(cfg.getString("exports.daily-budget", "1000"));
         boomChance = cfg.getDouble("booms.chance", 0.5);
         boomMultiplier = cfg.getDouble("booms.multiplier", 1.3);
         radius = cfg.getInt("ports.radius", 8);

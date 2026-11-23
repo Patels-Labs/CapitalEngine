@@ -20,7 +20,7 @@ world-prices:             # each item's world price wanders a little every day a
 
 exports:
   slide-k: 0.5            # the price falls as the day's quota fills: at a full quota it is half
-  daily-budget: 5000      # coins exports may create per day (CapitalEngine's issue-per-day for CapitalTrade is the hard limit)
+  daily-budget: 1000      # coins exports may create per day (CapitalEngine's issue-per-day for CapitalTrade is the hard limit)
 
 imports:
   slide-k: 0.5            # the price rises as the day's quota fills: at a full quota it is 1.5 times

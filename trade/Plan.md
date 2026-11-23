@@ -4,7 +4,7 @@
 > **Parent plan:** [../Plan.md](../Plan.md) · **Works with or without** [CapitalMarket](../market/Plan.md)
 
 ## 0. Build status
-**Built and tested** (`./gradlew :trade:test`: 16 tests, 5 pure-logic and 11 MockBukkit integration tests with the real CapitalEngine). Not yet done: the real-server smoke test on 1.21.11 and 26.x, joining once through Geyser, a check with real Citizens NPCs, the MySQL and PostgreSQL migrations against real servers (only SQLite is exercised), and `sim` scenarios for Trade (needed for "Done when" item 2). Not covered by a test: an export that core refuses with `POLICY_LIMIT` (quotes already stay inside core's cap, so it can't be provoked), and a commit that is still running after 30 seconds. The jar builds as `CapitalTrade-0.0.0.jar` until Release Please adds `trade/version.txt`.
+**Built and tested** (`./gradlew :trade:test`: 16 tests, 5 pure-logic and 11 MockBukkit integration tests with the real CapitalEngine). Not yet done: the real-server smoke test on 1.21.11 and 26.x, joining once through Geyser, a check with real Citizens NPCs, and the MySQL and PostgreSQL migrations against real servers (only SQLite is exercised). `sim` covers Trade with Market and Bank (`with-trade`), which is where "Done when" item 2 is checked. Not covered by a test: an export that core refuses with `POLICY_LIMIT` (quotes already stay inside core's cap, so it can't be provoked), and a commit that is still running after 30 seconds. The jar builds as `CapitalTrade-0.0.0.jar` until Release Please adds `trade/version.txt`.
 
 **What exists:** Ports (block and NPC), the Port menu (Export, Import when configured, Port News, Cargo), exports paid with `issue` inside the quota, the daily budget and core's cap, opt-in imports (tariff to the Treasury, the rest destroyed), Cargo, the daily world-price walk, weekly booms with Port News, crash recovery of `PENDING` shipments, the `capitaltrade` IndicatorProvider, PlaceholderAPI, `/trade help` and [docs/player-guide.md](docs/player-guide.md).
 
@@ -23,8 +23,9 @@
 - **Port News is printed in chat** (the menu button and `/trade news`) rather than shown as a menu page, so every client sees all of it.
 - **`importItems` takes `maxTotal`**, the price the player agreed to, like Market's `quickBuy`. `quotaLeft` returns a future.
 - Ports are removed by name (`/trade admin port remove <name>`).
+- **`exports.daily-budget` defaults to 1000, not 5000.** In `sim` exports were the biggest source of new money on 20 players, and 5000 let them empty the server's stock of surplus items (prices shot past the world price). 1000 is the lowest budget that still holds the Market price of a surplus item near its world price ([sim/RESULTS.md](../sim/RESULTS.md) §2).
 
-**Left for later:** a `sim` scenario with Market plus Trade (arbitrage); a `trade` entry in `release-please-config.json` and `.release-please-manifest.json` before the first release (repo files, not this module's); a Port keeper that follows a moved Citizens NPC.
+**Left for later:** a `trade` entry in `release-please-config.json` and `.release-please-manifest.json` before the first release (repo files, not this module's); a Port keeper that follows a moved Citizens NPC.
 
 ## 1. Purpose and scope
 CapitalTrade adds an NPC **world market** at **Ports**, so the server behaves like a small country trading with the rest of the world. It's a sell shop done right:
@@ -173,7 +174,7 @@ Today's quota use is summed from `shipments` (the day's PENDING and DONE rows), 
 ```yaml
 storage: { type: sqlite }
 world-prices: { theta: 0.10, sigma: 0.05, min-x: 0.5, max-x: 2.0, seed: 12345 }
-exports: { slide-k: 0.5, daily-budget: 5000 }
+exports: { slide-k: 0.5, daily-budget: 1000 }
 imports: { slide-k: 0.5 }
 booms: { chance: 0.5, multiplier: 1.3 }
 ports: { radius: 8, anywhere: false }
@@ -220,7 +221,7 @@ PlaceholderAPI: `%capitaltrade_price_<item>%`, `%capitaltrade_quota_<item>%`, `%
 
 ## 11. Done when
 - [ ] On a 2-player server, exports pay a fair-but-low price, quotas stop money printing, and Port News booms are visible.
-- [ ] With CapitalMarket installed, cheap Market items get bought and exported (seen in `sim`), which lifts the Market price toward the world price.
+- [x] With CapitalMarket installed, cheap Market items get bought and exported (seen in `sim`), which lifts the Market price toward the world price.
 - [ ] Imports are off by default. When enabled, they're a measurable money sink and the tariffs reach the Treasury.
 
 ## 12. Open questions
