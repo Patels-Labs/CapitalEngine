@@ -48,4 +48,9 @@ Every CapitalEngine plugin, and any add-on that wants to look like part of the f
 
 - **Free to use:** the frame template, the palette and this guide, under **CC BY 4.0**. Make your own emblem, put it in the frame, and credit "Frame by the CapitalEngine project".
 - **Reserved:** the CapitalEngine name, the official emblems and the official icons (core, Market, Bank, Dashboard, Trade) are not under the GPL or CC BY. Don't use them as your own add-on's icon.
-- **Naming:** call your add-on something like "Auctions for CapitalEngine". Names of the form `Capital<Word>` are kept for official plugins, so nobody mistakes a third-party add-on for an official one.
+## Naming your add-on
+Any add-on, official or not, may be called `Capital<Word>` (for example CapitalAuctions or CapitalQuests), as long as:
+
+1. **It says it is unofficial.** Your project page and README must carry this statement, or one with the same meaning:
+   > This project is not associated or affiliated with CapitalEngine or its owners, Heet Patel and Patel's Labs.
+2. **It doesn't reuse an official plugin's name.** These belong to the official plugins: CapitalEngine, CapitalMarket, CapitalBank, CapitalDashboard and CapitalTrade, plus the planned official add-ons in [Plan.md §11](../Plan.md) (CapitalBusiness, CapitalStocks, CapitalBanks+, CapitalBonds, CapitalCash, CapitalNations, CapitalTax and CapitalCredit). The list grows as official add-ons are added.
