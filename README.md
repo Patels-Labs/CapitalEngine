@@ -1,5 +1,7 @@
 # CapitalEngine
 
+<a href="https://github.com/Patels-Labs"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Patels-Labs/.github/main/brand/badge-on-dark.png"><img alt="A Patel's Labs project" src="https://raw.githubusercontent.com/Patels-Labs/.github/main/brand/badge-on-light.png" height="40"></picture></a>
+
 A modular economy for Minecraft Paper servers. It's simple for players and works like a real economy underneath: every coin has a recorded source, players set the prices, and an optional autopilot keeps prices steady.
 
 Supports Paper (and forks such as Purpur) **1.21.11 to 26.2**, with Bedrock players through Geyser and Floodgate.
@@ -49,14 +51,3 @@ Needs JDK 21 or newer. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a p
 CapitalEngine is free software under the [GNU GPL v3.0 only](LICENSE), with the [CapitalEngine Add-on Exception](ADDON-EXCEPTION.txt): plugins that use CapitalEngine only through its API can be released under any licence. Changes to CapitalEngine itself stay under the GPL.
 
 Icons, the shared frame and the rules for naming your own add-on are in [branding/](branding/README.md).
-
----
-
-<p align="center">
-  <a href="https://github.com/Patels-Labs">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Patels-Labs/.github/main/brand/badge-dark.png">
-      <img alt="A Patel's Labs project" src="https://raw.githubusercontent.com/Patels-Labs/.github/main/brand/badge-light.png" height="40">
-    </picture>
-  </a>
-</p>
