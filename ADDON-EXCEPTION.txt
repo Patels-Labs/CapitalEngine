@@ -1,0 +1,50 @@
+CapitalEngine Add-on Exception, version 1.0
+
+Copyright (c) 2026 Heet Patel
+
+CapitalEngine is licensed under the GNU General Public License, version 3 only
+(GPL-3.0-only), with the following additional permission under section 7 of
+that licence.
+
+
+1. Definitions
+
+"CapitalEngine" means the software in this repository, including the
+CapitalEngine core plugin, the CapitalEngine API, and the add-on plugins
+published with it.
+
+"The API" means the Java classes and interfaces in the package
+com.patelheet.capitalengine.api and its subpackages, as published by the
+copyright holders. That includes the artifact com.patelheet:capitalengine-api
+and the copies of those classes inside CapitalEngine.jar.
+
+"An Add-on" means a work that uses CapitalEngine only through the API: by
+compiling against the API, calling it, implementing interfaces the API
+documents as meant for plugins to implement, or listening to its events.
+An Add-on contains no other part of CapitalEngine's source code or object
+code, in modified or unmodified form, other than unmodified copies of the API
+that the Add-on's build tools need in order to compile it.
+
+
+2. Additional permission
+
+You may create, use, modify and convey an Add-on, in source or object form,
+under terms of your choice, including terms that are not the GPL and terms
+that do not provide source code, as long as the Add-on meets the definition
+above.
+
+You need not, and should not, bundle the API inside your Add-on, because
+CapitalEngine provides it at runtime. If you do convey unmodified copies of
+the API with your Add-on, those copies remain under the GPL with this
+exception, and you must say so and say where the corresponding source can be
+obtained.
+
+This permission does not extend to modified versions of the API or of any
+other part of CapitalEngine. Those remain under the GPL.
+
+
+3. Your modified versions of CapitalEngine
+
+If you modify CapitalEngine, you may extend this exception to your modified
+version, but you are not obliged to. If you do not wish to, delete this
+exception statement from your version.

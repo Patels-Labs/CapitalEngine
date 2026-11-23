@@ -150,7 +150,7 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 ./gradlew :sim:run --args="small-20.yml --days 120"   # long simulation; add --sweep key=v1,v2 for tuning sweeps
 ```
 - Each plugin module builds its jar into `<module>/build/libs/`.
-- `api` also publishes `com.patelheet:capitalengine-api` as a **binary jar plus Javadoc only** (no sources jar).
+- `api` also publishes `com.patelheet:capitalengine-api` as a binary jar with sources and Javadoc.
 
 ## Testing expectations
 - **Money logic** (anything that moves coins, splits amounts or rounds) gets a unit test that fails if the logic breaks.
@@ -160,7 +160,7 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 - **Before calling a phase done,** run its "Done when" checklist in that subproject's `Plan.md`. That includes the real-server smoke test on 1.21.11 and on 26.x, and joining once as a Bedrock player through Geyser.
 
 ## Git, CI and releases
-- **Two repos:** `patelheet30/CapitalEngine` (private, all source) and `patelheet30/capitalengine-api` (public, binaries and Javadoc only, served by GitHub Pages as a Maven repo at `https://patelheet30.github.io/capitalengine-api/m2`). Never push source to the public one; its workflows fail on `.java`/`.kt`/`.sql` files.
+- **Repos:** all source lives in `Patels-Labs/CapitalEngine`. The API's Maven files are still served from `patelheet30/capitalengine-api` by GitHub Pages at `https://patelheet30.github.io/capitalengine-api/m2`; that repo holds binaries only, and its workflows fail on `.java`/`.kt`/`.sql` files.
 - **Work on a branch, open a PR, squash-merge once CI (`build`) is green.** Don't push to `main`. (GitHub's free plan can't enforce this on private repos, so it is a habit. The public repo is enforced.)
 - **Commit messages and PR titles are Conventional Commits: `type(scope): summary`.** The PR title becomes the squash commit on `main`, and Release Please reads it to choose the next version and write the changelog. The `PR title` check rejects any other shape. Use the same format for commits on a branch.
   - **Type: what kind of change.** `feat` (new behaviour, minor release), `fix` (bug fix, patch), `perf` (patch), `refactor`, `docs`, `test`, `build`, `ci`, `chore` (these four trigger no release on their own), `revert`. Add `!` after the scope, or a `BREAKING CHANGE:` footer, for a change that breaks config, the API or saved data (major release).
@@ -173,14 +173,16 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 - **Rehearse or repair:** run the "Release plugin" or "Release API" workflow by hand with `dry_run` to build without publishing, or give it an existing tag to attach a jar again. Don't create release tags by hand.
 - **Release PRs get their `build` check from the Release workflow.** GitHub doesn't start CI for pull requests opened with the built-in token, and `main`'s ruleset requires `build`, so the `check-release-pr` job builds the release PR's branch and reports the result as `build` on its head commit; it re-runs whenever Release Please updates the PR. If it is ever missing, close and reopen the release PR (a user action starts CI normally). The release workflow also builds and tests each module again before it attaches a jar.
 - **One-time repo settings the automation needs:** *Settings, Actions, General, "Allow GitHub Actions to create and approve pull requests"* turned on, and *Settings, General, Pull Requests, squash merge default message* set to "Pull request title".
-- **No AI attribution on the public repo.** Commits, PR titles and bodies, release notes and files that go to `capitalengine-api` must not contain "Co-Authored-By: Claude", "Generated with Claude Code" or any similar line. (The attribution lines other tooling suggests are fine on the private repo only.)
+- **No AI attribution anywhere.** Commits, PR titles and bodies, release notes and files must not contain "Co-Authored-By: Claude", "Generated with Claude Code" or any similar line, whatever other tooling suggests.
 - **Published versions are immutable.** Fix a bad release with a `fix` PR and the patch release it produces. Release tags can't be moved or deleted.
 
-## Licence and confidentiality
-- **Closed source, All Rights Reserved.** © Heet Patel (patelheet.com).
-- **Don't add open-source licence files or headers.** Don't publish source anywhere, and don't push this repo to a public remote.
-- **The API jar is the only thing distributed to third parties,** as binary plus Javadoc. Its terms are in [api/API-LICENSE.txt](api/API-LICENSE.txt), which the build copies into the jar as `META-INF/API-LICENSE.txt`. Any change to those terms needs a new licence version number.
-- **Third-party libraries** keep their own licences. Respect them, and record any that are bundled.
+## Licence
+- **GPL-3.0-only with the [CapitalEngine Add-on Exception](ADDON-EXCEPTION.txt).** © Heet Patel (patelheet.com). Add-ons that use CapitalEngine only through `com.patelheet.capitalengine.api` may use any licence; everything else, including changes to the API, stays GPL.
+- **Every jar carries `META-INF/LICENSE` and `META-INF/ADDON-EXCEPTION.txt`** (root `build.gradle.kts`). The API jar also carries [api/API-LICENSE.txt](api/API-LICENSE.txt), the plain-words summary. Any change to the exception or that summary needs a new version number.
+- **Keep the API boundary clean.** Anything an add-on needs must be in the `api` package, because add-ons may only use what is there. Never move implementation into `api`.
+- **Contributions come in under the same terms** (see [CONTRIBUTING.md](CONTRIBUTING.md)). Don't paste code from projects with incompatible licences.
+- **Third-party libraries** keep their own licences. Don't bundle (shade) one without checking it is GPL-3.0-compatible and recording it.
+- **The name, logo and official icons are not covered by the GPL.** They follow the brand policy in `branding/` once it exists.
 
 ## References
 - Paper docs: https://docs.papermc.io
