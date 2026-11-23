@@ -170,6 +170,8 @@ public class CapitalBankPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true) public void onOpen(InventoryOpenEvent e) {
         // block containers only (chests, barrels, furnaces, double chests); menus have no location and entities aren't land
-        if (e.getPlayer() instanceof Player p && !(e.getInventory().getHolder(false) instanceof org.bukkit.entity.Entity)) block(e, p, e.getInventory().getLocation());
+        if (!(e.getPlayer() instanceof Player p) || service.frozen.isEmpty()) return;
+        Location loc = e.getInventory().getLocation();
+        if (loc != null && !(e.getInventory().getHolder() instanceof org.bukkit.entity.Entity)) block(e, p, loc);
     }
 }

@@ -41,17 +41,6 @@ final class Menu implements InventoryHolder {
         p.openInventory(inv);
     }
 
-    /** A coloured section label (a named pane). */
-    static ItemStack pane(Material glass, Component name, Component... lore) { return icon(glass, name, lore); }
-
-    /** Slots for {@code n} buttons centred on a row of nine (row 0 is the first row). */
-    static int[] centered(int row, int n) {
-        int[] slots = new int[n];
-        int start = (9 - n) / 2;
-        for (int i = 0; i < n; i++) slots[i] = row * 9 + start + i;
-        return slots;
-    }
-
     @Override public Inventory getInventory() { return inv; }
 
     static ItemStack icon(Material type, Component name, Component... lore) {

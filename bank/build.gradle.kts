@@ -14,7 +14,9 @@ dependencies {
     compileOnly(libs.floodgate)
     compileOnly(libs.griefprevention) { isTransitive = false }
     compileOnly(libs.lands) { isTransitive = false }
-    compileOnly(libs.worldguard) { exclude(group = "org.bukkit"); exclude(group = "io.papermc.paper"); exclude(group = "org.spigotmc") }
+    compileOnly(libs.worldguard) {   // keep its newer guava/gson and its own server API off our classpath: we compile against paper-api
+        for (g in listOf("org.bukkit", "io.papermc.paper", "org.spigotmc", "com.google.guava", "com.google.code.gson")) exclude(group = g)
+    }
 
     testImplementation(libs.paper.api)
     testImplementation(project(":api"))
