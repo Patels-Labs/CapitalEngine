@@ -15,7 +15,7 @@ The project is a **monorepo of separate plugins:**
 The full design is in [Plan.md](Plan.md).
 
 ## Status
-**Phase 0 (`api` + `core`) is built and tested** (`./gradlew build`); it has been smoke-tested on real Paper 1.21.11 and 26.2, and the API 1.0.0 jar is published. Still open: a Bedrock join through Geyser, a server with only the original Vault, real EssentialsX and Jobs, and MySQL (see the "Done when" list in [core/Plan.md](core/Plan.md)). **Phase 1 (`market`) is built and tested** (see "Build status" in [market/Plan.md](market/Plan.md); what is left is in [BACKLOG.md](BACKLOG.md), and `sim` covers the market only so far ([sim/RESULTS.md](sim/RESULTS.md))). Bank, Dashboard and Trade have only their `Plan.md` files so far.
+**Phase 0 (`api` + `core`) is built and tested** (`./gradlew build`); it has been smoke-tested on real Paper 1.21.11 and 26.2, and the API 1.0.0 jar is published. Still open: a Bedrock join through Geyser, a server with only the original Vault, real EssentialsX and Jobs, and MySQL (see the "Done when" list in [core/Plan.md](core/Plan.md)). **Phase 1 (`market`) is built and tested** (see "Build status" in [market/Plan.md](market/Plan.md); what is left is in [BACKLOG.md](BACKLOG.md)). **Phases 2–4 (`bank`, `dashboard`, `trade`) are built and tested** under MockBukkit (see "Build status" at the top of each `Plan.md`); none has had a real-server, Bedrock or MySQL run yet. `sim` drives market, bank and trade together ([sim/RESULTS.md](sim/RESULTS.md)).
 
 Build order (root [Plan.md §15](Plan.md)):
 - **Phase 0:** `api` + `core`
@@ -86,11 +86,11 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 
 ## Architecture rules (don't break these)
 1. **Core owns all money.** Every coin movement goes through the CapitalEngine API, and add-ons never touch the ledger database.
-2. **Add-ons never depend on each other.** Each declares `depend: [CapitalEngine]` only. They share things only through:
+2. **The main add-ons never depend on each other.** Market, Bank, Dashboard and Trade each declare `depend: [CapitalEngine]` only. They share things only through:
    - `MonetaryPolicy` and `IndicatorProvider` services, via Bukkit's `ServicesManager`
    - API events: `CapitalDayEvent`, `CapitalWeekEvent`, `CapitalTransactionEvent`, `CapitalAlertEvent`, …
 
-   A plain `isPluginEnabled("X")` check is allowed *only* to change defaults (Market does this for Bank). The exception for the future is an add-on that is literally built on another one (Stocks on Business).
+   A plain `isPluginEnabled("X")` check is allowed *only* to change defaults (Market does this for Bank). The exception is a future add-on that is literally built on another one and declares it in `depend`: Stocks on Business, Banks+ on Bank.
 3. **Money is a `long` count of the smallest unit.** Never use `double` or `float` for money. The only conversions to and from `double`/`BigDecimal` happen in core's Vault adapters.
 4. **Ledger rows are never updated or deleted.** Corrections are reversing transactions.
 5. **Every transaction** has:
@@ -182,7 +182,7 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 - **Keep the API boundary clean.** Anything an add-on needs must be in the `api` package, because add-ons may only use what is there. Never move implementation into `api`.
 - **Contributions come in under the same terms** (see [CONTRIBUTING.md](CONTRIBUTING.md)). Don't paste code from projects with incompatible licences.
 - **Third-party libraries** keep their own licences. Don't bundle (shade) one without checking it is GPL-3.0-compatible and recording it.
-- **Brand assets (name, logo, icons): policy pending.** The proposal is in `branding/README.md` (brand kit PR); until it is decided, treat official icons as the owner's.
+- **Brand assets:** the icons, frame and add-on naming rules are in [branding/README.md](branding/README.md). Whether the frame template is CC BY 4.0 is still the owner's decision; until then treat every icon as the owner's.
 
 ## References
 - Paper docs: https://docs.papermc.io

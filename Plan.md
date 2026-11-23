@@ -35,7 +35,7 @@ A modular Minecraft economy. **CapitalEngine** is a small, trustworthy core: one
 ```
 
 - **Core alone is a complete economy plugin,** a drop-in replacement for EssentialsX Eco or CMI. Owners install add-ons only for the features they want.
-- **Add-ons never depend on each other.** For example, CapitalBank works with or without CapitalMarket (§5.3). The only exception is a future add-on that is literally built on another one, such as Stocks on Business.
+- **The main add-ons never depend on each other.** For example, CapitalBank works with or without CapitalMarket (§5.3). The only exception is a future add-on that is literally built on another one, such as Stocks on Business or Banks+ on Bank.
 - **Add-ons only talk to core through the API.** They never touch the database or another add-on's internals. If an add-on can't do something through the API, the API grows; no shortcuts.
 
 ## 3. Design rules for simplicity
@@ -316,10 +316,10 @@ Market, Jobs Board, autopilot and Market News live in one plugin, because the au
   - A missed payment **only pauses borrowing**. There are no debt collectors and no seized items by default.
   - Repayment comes automatically from incoming coins, and a player can never go below zero.
   - A loan that's never repaid is written off and recorded, and its coins count as created money.
-- **Land upkeep.** "Your claim costs 15 coins/day", paid into the Treasury, with integrations for GriefPrevention, Lands, Towny and WorldGuard. It makes giant unused claims cost something.
+- **Land upkeep.** "Your claim costs 15 coins/day", paid into the Treasury, with integrations for GriefPrevention, Lands and WorldGuard (Towny already charges its own upkeep through Vault). It makes giant unused claims cost something.
   - If a player can't pay, the default is a warning, then the claim is frozen (no new building). It's never deleted.
 - **Rates** come from CapitalMarket's `MonetaryPolicy` when it's installed, and from fixed config values when it isn't.
-- **Placeholders:** `%capitalbank_savings%`, `%capitalbank_rate%`, `%capitalbank_loan%`.
+- **Placeholders:** `%capitalbank_savings%`, `%capitalbank_rate%`, `%capitalbank_loan_left%` (`%capitalbank_loan%` also works), `%capitalbank_upkeep_due%`.
 
 ## 10. CapitalDashboard add-on (owners only)
 
@@ -339,7 +339,7 @@ Market, Jobs Board, autopilot and Market News live in one plugin, because the au
 |---|---|
 | **CapitalBusiness** | Shared business accounts with members and roles, payroll, simple profit and loss books. Backs Vault's shared-account and bank methods. |
 | **CapitalStocks** | Businesses sell shares that players can trade and receive dividends from. Needs CapitalBusiness. |
-| **CapitalBanks+** | Player-run banks with deposits, own rates and loans, backed by reserves. |
+| **CapitalBanks+** | Player-run banks with deposits, own rates and loans, backed by reserves. Needs CapitalBank. |
 | **CapitalBonds** | Players lend to the server for a fixed return, which gives the autopilot another lever. |
 | **CapitalCash** | Coins and cheques as physical items with serial numbers. They can drop on death, which suits PvP, and duplicated copies are caught. |
 | **CapitalNations** | Each Towny, Factions or Lands nation gets its own currency, with exchange rates set by trading. Requires VaultUnlocked. |
