@@ -26,6 +26,7 @@ too-expensive: "<red>The price has changed to <total>. Please try again.</red>"
 err-funds: "<red>You do not have enough coins.</red>"
 err-full: "<red>The ships are full for today! Try again tomorrow, or sell to other players.</red>"
 err-paused: "<red>The Port is closed for a moment. Your items have been returned; please try again soon.</red>"
+err-slow: "<yellow>The ships are taking longer than usual. Your coins or items will arrive soon; check <white>/trade cargo</white> in a little while.</yellow>"
 err-other: "<red>The request could not be completed. Nothing was taken; please try again.</red>"
 
 # ---- chat: confirmations and results ------------------------------------------------------------------------------

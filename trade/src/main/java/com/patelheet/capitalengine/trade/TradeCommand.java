@@ -58,6 +58,7 @@ final class TradeCommand implements CommandExecutor, TabCompleter {
             case "port create" -> {
                 String name = x.length > 3 ? String.join("_", Arrays.copyOfRange(x, 3, x.length)) : "port" + (ports.list().size() + 1);
                 Entity e = p.getTargetEntity(5);
+                if (e instanceof Player && !e.hasMetadata("NPC")) e = null;   // a real player is never a Port; Citizens tags its NPCs "NPC"
                 Block b = p.getTargetBlockExact(5);
                 Ports.Result r = e != null ? ports.create(e, name) : b != null ? ports.create(b, name) : null;
                 a.say(p, r == null ? "port-look" : "port-" + r.name().toLowerCase().replace('_', '-'), "name", name);

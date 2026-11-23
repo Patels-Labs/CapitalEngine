@@ -112,22 +112,29 @@ final class Actions {
     }
 
     /**
-     * Cargo -> inventory; whatever doesn't fit goes back into Cargo. Runs after every shipment, so items an export didn't take
-     * come straight back. ponytail: Cargo is emptied a moment before the items are given; a crash in that instant loses them.
+     * Cargo -> inventory; whatever doesn't fit goes back into Cargo, and so does everything if the player has left by then. Runs
+     * after every shipment, so items an export didn't take come straight back.
+     * ponytail: Cargo is emptied a moment before the items are given; a crash in that instant loses them.
      */
     void collect(Player p, boolean quiet) {
-        then(p, svc.takeCargo(p.getUniqueId()), got -> {
-            Map<String, Integer> left = new HashMap<>();
-            int given = 0;
-            for (var e : got.entrySet()) {
-                int over = p.getInventory().addItem(Items.stacks(e.getKey(), e.getValue())).values().stream().mapToInt(ItemStack::getAmount).sum();
-                if (over > 0) left.put(e.getKey(), over);
-                given += e.getValue() - over;
-            }
-            if (!left.isEmpty()) { svc.stow(p.getUniqueId(), left); say(p, "cargo-full", "qty", left.values().stream().mapToInt(Integer::intValue).sum()); }
-            if (given > 0 && !quiet) say(p, "cargo-collected", "qty", given);
-            else if (got.isEmpty() && !quiet) say(p, "cargo-empty");
+        UUID id = p.getUniqueId();
+        svc.takeCargo(id).whenComplete((got, e) -> {
+            if (e != null) { sync(p, () -> say(p, "err-other")); return; }
+            if (p.getScheduler().run(plugin, t -> deliver(p, got, quiet), () -> svc.stow(id, got)) == null) svc.stow(id, got);
         });
+    }
+
+    private void deliver(Player p, Map<String, Integer> got, boolean quiet) {
+        Map<String, Integer> left = new HashMap<>();
+        int given = 0;
+        for (var e : got.entrySet()) {
+            int over = p.getInventory().addItem(Items.stacks(e.getKey(), e.getValue())).values().stream().mapToInt(ItemStack::getAmount).sum();
+            if (over > 0) left.put(e.getKey(), over);
+            given += e.getValue() - over;
+        }
+        if (!left.isEmpty()) { svc.stow(p.getUniqueId(), left); say(p, "cargo-full", "qty", left.values().stream().mapToInt(Integer::intValue).sum()); }
+        if (given > 0 && !quiet) say(p, "cargo-collected", "qty", given);
+        else if (got.isEmpty() && !quiet) say(p, "cargo-empty");
     }
 
     // ---- shipments ---------------------------------------------------------------------------------------------

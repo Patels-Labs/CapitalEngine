@@ -163,12 +163,17 @@ public final class TradeService implements AutoCloseable, IndicatorProvider {
     }
 
     /**
-     * Commits and waits. If the outcome is unknown (the commit threw), the ledger is asked by reference, because handing
-     * items back after the coins moved would duplicate them.
+     * Commits and waits. If the commit threw, the ledger is asked by reference, because handing items back after the coins moved
+     * would duplicate them. If it is still running after 30 seconds, this returns null: the shipment stays PENDING and is settled
+     * by {@link #resolve} once the commit completes.
      */
-    private TxResult settle(CompletableFuture<TxResult> f, String reference) {
+    private TxResult settle(CompletableFuture<TxResult> f, String reference, long id) {
         try { return f.get(30, TimeUnit.SECONDS); }
-        catch (Exception e) {
+        catch (java.util.concurrent.TimeoutException e) {
+            plugin.getLogger().warning("The ledger is slow to confirm " + reference + "; settling it when it does");
+            f.whenComplete((r, ex) -> run(() -> { Shipment s = store.shipment(id); if (s != null && s.status().equals("PENDING")) resolve(s); return null; }));
+            return null;
+        } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Unclear result for " + reference + "; checking the ledger", e);
             boolean done = api.findByReference(plugin, reference).join().isPresent();
             return new TxResult(done, 0, done ? Failure.NONE : Failure.INTERNAL, "", 0, 0);
@@ -274,7 +279,8 @@ public final class TradeService implements AutoCloseable, IndicatorProvider {
             count(item, EXPORT, q.qty(), q.total(), 0);
             String ref = "exp:" + id;
             TxResult r = settle(api.transaction(plugin, "trade.export", msg.plain("memo-export", "qty", q.qty(), "item", Items.pretty(item)))
-                    .reference(ref).actor(p).issue(api.accounts().player(p), q.total()).commit(), ref);
+                    .reference(ref).actor(p).issue(api.accounts().player(p), q.total()).commit(), ref, id);
+            if (r == null) return new TradeResult(0, 0, "err-slow");
             boolean done = ok(r);
             store.tx(() -> { store.status(id, done ? "DONE" : "FAILED"); if (!done) store.addCargo(p.toString(), item, q.qty()); });
             if (!done) count(item, EXPORT, -q.qty(), -q.total(), 0);
@@ -292,15 +298,15 @@ public final class TradeService implements AutoCloseable, IndicatorProvider {
             Quote q = importQuote(item, qty);
             if (q.qty() == 0) return new TradeResult(0, 0, "import-" + q.reason());
             if (q.total() > maxTotal) return new TradeResult(0, q.total(), "too-expensive");
-            var acct = api.accounts().player(p);
-            if (acct.balance() < q.total()) return new TradeResult(0, 0, "err-funds");
+            var acct = api.accounts().player(p);   // core refuses with INSUFFICIENT_FUNDS if the player can't pay: never below zero
             long id = store.insertShipment(p, item, IMPORT, q.qty(), q.total(), q.tariff(), day(), System.currentTimeMillis());
             count(item, IMPORT, q.qty(), q.total(), q.tariff());
             String ref = "imp:" + id;
             var tx = api.transaction(plugin, "trade.import", msg.plain("memo-import", "qty", q.qty(), "item", Items.pretty(item))).reference(ref).actor(p);
             if (q.tariff() > 0) tx.move(acct, api.treasury(), q.tariff());
             if (q.total() - q.tariff() > 0) tx.destroy(acct, q.total() - q.tariff());
-            TxResult r = settle(tx.commit(), ref);
+            TxResult r = settle(tx.commit(), ref, id);
+            if (r == null) return new TradeResult(0, 0, "err-slow");
             boolean done = ok(r);
             store.tx(() -> { store.status(id, done ? "DONE" : "FAILED"); if (done) store.addCargo(p.toString(), item, q.qty()); });
             if (!done) count(item, IMPORT, -q.qty(), -q.total(), -q.tariff());
@@ -320,20 +326,24 @@ public final class TradeService implements AutoCloseable, IndicatorProvider {
 
     // ---- startup, days and weeks -------------------------------------------------------------------------------
 
-    /**
-     * Settles anything that was in flight when the server stopped (CLAUDE.md rule 7): a paid shipment is finished, an unpaid one
-     * is dropped. Exported items that were never paid for, and paid imports, go to Cargo.
-     */
+    /** Finishes a PENDING shipment from the ledger: paid means DONE, unpaid means FAILED. An unpaid export's items and a paid import's go to Cargo. */
+    private void resolve(Shipment s) {
+        boolean paid = api.findByReference(plugin, (s.direction().equals(EXPORT) ? "exp:" : "imp:") + s.id()).join().isPresent();
+        store.tx(() -> {
+            store.status(s.id(), paid ? "DONE" : "FAILED");
+            if (s.direction().equals(EXPORT) ? !paid : paid) store.addCargo(s.uuid(), s.item(), s.qty());
+        });
+        if (!paid && s.day() == cDay) count(s.item(), s.direction(), -s.qty(), -s.total(), -s.tariff());
+    }
+
+    /** At startup: settles anything that was in flight when the server stopped (CLAUDE.md rule 7), then loads prices and the boom. */
     public CompletableFuture<Void> recover() {
+        return run(() -> { store.pending().forEach(this::resolve); return null; }).thenCompose(v -> load());
+    }
+
+    /** Loads world prices (adding any newly listed item at its base) and this week's boom. Also used by {@code /trade admin reload}. */
+    public CompletableFuture<Void> load() {
         return run(() -> {
-            for (Shipment s : store.pending()) {
-                boolean paid = api.findByReference(plugin, (s.direction().equals(EXPORT) ? "exp:" : "imp:") + s.id()).join().isPresent();
-                store.tx(() -> {
-                    store.status(s.id(), paid ? "DONE" : "FAILED");
-                    // an unpaid export hands its items back; a paid import delivers them
-                    if (s.direction().equals(EXPORT) ? !paid : paid) store.addCargo(s.uuid(), s.item(), s.qty());
-                });
-            }
             cDay = -1;
             long today = day();
             prices.putAll(store.prices());
@@ -381,7 +391,7 @@ public final class TradeService implements AutoCloseable, IndicatorProvider {
 
     /** On the Week event: maybe start a boom, and announce it. Never on catch-up. */
     public void onWeek(long week, boolean catchUp) {
-        if (catchUp) return;
+        if (catchUp) { run(() -> { setBoom(week, null, 1); return null; }); return; }   // last week's boom ends; no new one after downtime
         run(() -> {
             String item = Booms.roll(wp.seed(), week, boomChance, List.copyOf(exports.keySet()));
             setBoom(week, item, boomMultiplier);

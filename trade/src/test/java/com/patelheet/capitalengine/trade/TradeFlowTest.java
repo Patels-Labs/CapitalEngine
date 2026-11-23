@@ -119,7 +119,7 @@ class TradeFlowTest {
         settle();
         long paid = Slide.exportTotal(80, 0, 128, 128, 0.5);
         assertEquals(supply + paid, api.stats().moneySupply(), "only the quota was paid for");
-        assertEquals(64, held(samP, Material.WHEAT), "what the ships couldn't take came back");
+        assertEquals(64, held(samP, Material.WHEAT), "only what the ships take leaves the inventory");
         var r = await(svc.export(sam, "wheat", 10));
         assertEquals("export-quota", r.error());
         assertEquals(0, r.qty());
@@ -132,6 +132,14 @@ class TradeFlowTest {
         assertEquals(3 * 128 - 128, await(svc.quotaLeft("wheat", true)));
     }
 
+    @Test void whatTheShipsCantTakeGoesToCargoInTheSameStep() throws Exception {
+        var r = await(svc.export(sam, "carrot", 200));   // the caller has taken 200; the quota is 128
+        assertEquals(128, r.qty());
+        assertEquals("export-quota", r.error());
+        assertEquals(72, await(svc.cargo(sam)).get("carrot"));
+        assertEquals("DONE", svc.store.shipment(1).status());
+    }
+
     @Test void exportsStayInsideCoresDailyCapAndTheItemsAlwaysGoBack() throws Exception {
         portHere();
         assertNull(core.setPolicy("CapitalTrade", "issue-per-day", "5"));   // 500 units: one iron ingot (2.60) fits, two don't
@@ -141,7 +149,7 @@ class TradeFlowTest {
         assertEquals("budget", q.reason());
         trade.actions().startExport(samP, "iron_ingot", 5, YES);
         settle();
-        assertEquals(4, held(samP, Material.IRON_INGOT), "the four the budget couldn't cover came back");
+        assertEquals(4, held(samP, Material.IRON_INGOT), "the four the budget couldn't cover never left");
         trade.actions().startExport(samP, "iron_ingot", 4, YES);
         settle();
         assertEquals(4, held(samP, Material.IRON_INGOT));
@@ -187,9 +195,14 @@ class TradeFlowTest {
         core.activity().recordActivity(sam, 10);
         core.activity().recordActivity(poor, 10);   // two active players: the quota is 2
         long poorBefore = bal(poor);
-        assertEquals("err-funds", await(svc.importItems(poor, "sponge", 1, Long.MAX_VALUE)).error());
-        assertEquals(poorBefore, bal(poor), "never below zero");
-        assertTrue(await(svc.cargo(poor)).isEmpty());
+        assertEquals(1L, await(svc.quotaLeft("sponge", false)));
+        assertEquals("err-funds", await(svc.importItems(poor, "sponge", 1, Long.MAX_VALUE)).error(), "core refuses: never below zero");
+        assertEquals(poorBefore, bal(poor));
+        assertTrue(await(svc.cargo(poor)).isEmpty(), "a failed import delivers nothing");
+        assertEquals(1L, await(svc.quotaLeft("sponge", false)), "and frees its quota again");
+        var failed = svc.store.pending();
+        assertTrue(failed.isEmpty());
+        assertEquals("FAILED", svc.store.shipment(2).status());
     }
 
     @Test void portNewsAnnouncesABoomAndPricesRise() throws Exception {
@@ -204,9 +217,10 @@ class TradeFlowTest {
         assertTrue(plain.contains("Nothing has been shipped yet today"));
 
         long week = api.stats().weekIndex();
-        svc.onWeek(week + 1, true);   // catch-up weeks never start a boom
+        svc.onWeek(week + 1, true);   // a catch-up week ends last week's boom and never starts one
         await(svc.idle());
-        assertEquals("pumpkin", svc.boomItem);
+        assertNull(svc.boomItem);
+        assertEquals(before, svc.worldPrice("pumpkin"), 1e-9);
         svc.onWeek(week + 1, false);
         await(svc.idle());
         assertEquals(Booms.roll(12345, week + 1, 0.5, List.copyOf(svc.exports.keySet())), svc.boomItem);

@@ -62,7 +62,7 @@ Command: `/trade buy <item> <amount>`, then `/trade yes`.
 Some weeks, faraway lands want one item more and pay extra for it, for example *"⚓ Port News: Faraway lands want PUMPKINS this week! Prices are up 30% at the Port."* The news is announced in chat when it starts. Check it any time with the **Port News** button or `/trade news`.
 
 ## Your Cargo
-Items that do not fit in your inventory wait in your **Cargo**: things you bought from abroad, and anything the ships could not take. Nothing in your Cargo is ever lost. Collect it at any Port with **Collect Cargo** or `/trade cargo`.
+Items that do not fit in your inventory wait in your **Cargo**: things you bought from abroad, and anything the ships could not take. Items stay in your Cargo until you collect them. Collect it at any Port with **Collect Cargo** or `/trade cargo`.
 
 ## Playing on Bedrock
 Everything works on Bedrock through Geyser:

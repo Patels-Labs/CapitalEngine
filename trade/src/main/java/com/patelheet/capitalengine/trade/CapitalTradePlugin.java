@@ -61,7 +61,7 @@ public class CapitalTradePlugin extends JavaPlugin implements Listener {
     void reload() {
         msg.reload();
         loadListings();
-        service.recover();   // prices for newly listed items
+        service.load();   // prices for newly listed items
     }
 
     /** Same {@code storage:} keys as CapitalEngine; MySQL and PostgreSQL tables get the {@code prefix} so a database can be shared. */
