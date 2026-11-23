@@ -3,7 +3,6 @@ package com.patelheet.capitalengine.sim;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /** The CI gate (sim/Plan.md §8): short scenarios that must keep the books balanced and the economy inside its bands. */
@@ -25,16 +24,18 @@ class SimScenariosTest {
         assertTrue(r.passed(), r.failures().toString());
     }
 
-    @Test void aFarmFloodMakesWheatCheaperAndTheBooksStillBalance() throws Exception {
-        var r = run("farm-flood", 60, Map.of());
-        assertTrue(r.passed(), r.failures().toString());
-        assertTrue(r.rows().get(39)[23] < r.rows().get(28)[23], "wheat gets cheaper during the flood");
-    }
-
-    @Disabled("Known gap, see sim/RESULTS.md: the 2% daily stock use-up needs about four months to clear a 20x flood, and \"the town needs\" jobs don't remove server stock")
+    /** One 70-day run (the flood is days 30 to 39) covers the books, the server's stock during the flood, and the recovery after it. */
     @Test void aFarmFloodRecoversWithinFourWeeksOfEnding() throws Exception {
         var r = run("farm-flood", 70, Map.of());
-        assertTrue(r.rows().get(69)[23] >= r.rows().get(28)[23] * 0.9, "wheat is back within 10% of its old price 4 weeks after the flood ends");
+        assertTrue(r.passed(), r.failures().toString());
+        double most = r.rows().stream().filter(x -> x[0] >= 30).mapToDouble(x -> x[24]).max().orElseThrow();
+        assertTrue(most < 4 * 640, "\"the town needs\" jobs use up the server's extra wheat (stock " + most + "; it reached about 12x the 640 target before they did)");
+        assertTrue(week(r, 64) >= week(r, 23) * 0.9, "wheat is back within 10% of its old price 4 weeks after the flood ends: " + week(r, 64) + " vs " + week(r, 23));
+    }
+
+    /** Wheat's average ask over the 7 days from {@code firstDay}: single days swing by up to 20% as town jobs fill and the server buys. */
+    private static double week(Simulation.Result r, int firstDay) {
+        return r.rows().stream().filter(x -> x[0] >= firstDay && x[0] < firstDay + 7).mapToDouble(x -> x[23]).average().orElseThrow();
     }
 
     @Test void theSameSeedGivesTheSameRun() throws Exception {

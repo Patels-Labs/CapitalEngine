@@ -14,7 +14,6 @@ import org.bukkit.inventory.ItemStack;
 /**
  * What a player can do, shared by the chat commands and the menus: take items out of the inventory, call the service,
  * report the result. Callers differ only in how they ask "are you sure?" ({@link Confirm}).
- * ponytail: items leave the inventory before the Stash write is queued; a crash in that instant loses them.
  */
 final class Actions {
     /** Asks the player to confirm a cost, then runs {@code yes}. */
@@ -115,25 +114,34 @@ final class Actions {
         return p.getInventory().addItem(Items.stacks(key, qty)).values().stream().mapToInt(ItemStack::getAmount).sum();
     }
 
-    /** Inventory -> Stash, then {@code next}. Gives the items back if the Stash is full. */
+    /**
+     * Inventory -> Stash, then {@code next}. The Stash records the items (held, so they can't be spent) before they leave the
+     * inventory, and the hold is then settled to what was really taken: a crash in between keeps them in the Stash, never nowhere.
+     */
     void deposit(Player p, String key, int qty, Runnable next) {
-        int got = take(p, key, qty);
-        if (got == 0) { next.run(); return; }
-        then(p, svc.deposit(p.getUniqueId(), key, got), ok -> {
-            if (!ok) { give(p, key, got); say(p, "stash-full"); } else next.run();
-        });
+        int want = Math.min(qty, count(p, key));
+        if (want == 0) { next.run(); return; }
+        UUID id = p.getUniqueId();
+        svc.holdIn(id, key, want).whenComplete((ok, e) -> p.getScheduler().run(plugin, t -> {
+            if (e != null) { say(p, "err-other"); return; }
+            if (!ok) { say(p, "stash-full"); return; }
+            int got = take(p, key, want);
+            then(p, svc.settle(id, key, want, want - got), v -> next.run());
+        }, () -> { if (Boolean.TRUE.equals(ok)) svc.settle(id, key, want, want); }));   // logged off first: nothing was taken
     }
 
-    /** Stash -> inventory, at a stall unless the owner allows it anywhere. */
+    /** Stash -> inventory, at a stall unless the owner allows it anywhere. Held the same way: given first, removed after. */
     void withdraw(Player p, String key, int qty, Runnable after) {
         if (!stalls.canWithdraw(p)) { say(p, "need-stall"); return; }
-        then(p, svc.withdraw(p.getUniqueId(), key, qty), n -> {
+        UUID id = p.getUniqueId();
+        svc.holdOut(id, key, qty).whenComplete((n, e) -> p.getScheduler().run(plugin, t -> {
+            if (e != null) { say(p, "err-other"); return; }
             if (n == 0) { say(p, "nothing-taken"); return; }
-            int left = give(p, key, n);
-            if (left > 0) svc.deposit(p.getUniqueId(), key, left);   // inventory was full: put the rest back
-            say(p, "taken", "qty", n - left, "item", Items.pretty(key));
+            int given = n - give(p, key, n);   // a full inventory leaves the rest in the Stash
+            svc.settle(id, key, n, given);
+            say(p, "taken", "qty", given, "item", Items.pretty(key));
             after.run();
-        });
+        }, () -> { if (n != null && n > 0) svc.settle(id, key, n, 0); }));   // logged off first: nothing was given
     }
 
     // ---- trading -----------------------------------------------------------------------------------------------

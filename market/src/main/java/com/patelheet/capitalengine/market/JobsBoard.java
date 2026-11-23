@@ -120,7 +120,8 @@ public final class JobsBoard {
                 n = (int) Math.min(n, left / j.pay());
                 if (n == 0) return Result.err("job-paused");
             }
-            if (j.project() != null && chestOf(j.project()) != null) {   // the project chest must have room
+            boolean chest = j.project() != null && chestOf(j.project()) != null;
+            if (chest) {   // the project chest must have room
                 n = Math.min(n, room(j.project(), j.item()));
                 if (n == 0) return Result.err("job-chest-full");
             }
@@ -131,9 +132,9 @@ public final class JobsBoard {
                     .reference("job:" + jobId + ":" + id).actor(p);
             TxResult r = (server ? tx.serverPay(svc.acct(p.toString()), paid) : tx.move(escrow(), svc.acct(p.toString()), paid)).commit().join();
             if (!svc.ok(r)) { st.failDelivery(id); return Result.err(svc.errKey(r.failure())); }
-            st.finishDelivery(id, jobId, p, n);
+            st.finishDelivery(id, jobId, p, n, svc.targetStock, chest);
             if (server) svc.addJobPaid(paid);
-            if (j.project() != null) toChest(j.project(), j.item(), n, p);
+            if (chest) toChest(id, j.project(), j.item(), n, p);
             svc.tutorial.advance(p, 3);
             return new Result(n, paid, null, jobId);
         });
@@ -184,15 +185,21 @@ public final class JobsBoard {
         return f.orTimeout(5, TimeUnit.SECONDS).join();
     }
 
-    /** Puts delivered items in the chest; whatever doesn't fit (it filled up meanwhile) goes back to the deliverer's Stash. */
-    private void toChest(String project, String key, int n, UUID back) {
+    /**
+     * Puts a paid delivery's items in the project chest; whatever doesn't fit (it filled up or was removed meanwhile) goes back to the
+     * deliverer's Stash. The delivery stays CHEST until then, so a crash in between sends the items again on start ({@link #recover}).
+     * ponytail: the chest and the database don't commit together, so a crash right after the items land can put them in twice; the
+     * owner's own chest getting extra beats players losing items.
+     */
+    private void toChest(long deliveryId, String project, String key, int n, UUID back) {
         Location loc = chestOf(project);
-        if (loc == null) return;
+        if (loc == null) { svc.store.deliveryStatus(deliveryId, "DONE"); return; }   // the chest is gone: used up, like a project without one
         Bukkit.getRegionScheduler().run(svc.plugin, loc, t -> {
             int left = n;
             if (loc.getBlock().getState() instanceof Container c)
                 left = c.getInventory().addItem(Items.stacks(key, n)).values().stream().mapToInt(ItemStack::getAmount).sum();
-            if (left > 0) svc.deposit(back, key, left);
+            int rest = left;
+            svc.run(() -> { svc.store.tx(() -> { if (rest > 0) svc.store.deposit(back, key, rest); svc.store.deliveryStatus(deliveryId, "DONE"); }); return null; });
         });
     }
 
@@ -210,10 +217,11 @@ public final class JobsBoard {
                 if (!svc.base.containsKey(item) || svc.store.projectJobExists(project, item)) continue;   // we can only price items the server trades
                 svc.store.insertJob(null, item, need.getValue(), serverPay(item, premiums.getOrDefault(project, premium)), project, now, 0, "OPEN");
             }
-        for (String item : svc.base.keySet()) {   // then items the town has too much of, or whose price fell
+        // then items the server holds more of than its target, or whose price fell; what players bring for these uses up the server's extra
+        for (String item : svc.base.keySet()) {
             if (svc.store.serverJobOpen(item)) continue;
             long stock = svc.store.stock(item);
-            boolean surplus = stock > 2 * svc.targetStock, fell = svc.trend.getOrDefault(item, 1.0) < 0.9;
+            boolean surplus = stock > svc.targetStock, fell = svc.trend.getOrDefault(item, 1.0) < 0.9;
             if (!surplus && !fell) continue;
             int qty = (int) Math.min(svc.dailyBuyCap, Math.max(64, surplus ? stock - svc.targetStock : svc.targetStock / 4));
             svc.store.insertJob(null, item, qty, serverPay(item, premium), null, now, today + 3, "OPEN");
@@ -251,9 +259,14 @@ public final class JobsBoard {
         loadProjects();
         for (Job j : svc.store.jobs("SELECT * FROM jobs WHERE status='PENDING'"))
             svc.store.jobStatus(j.id(), svc.api.findByReference(svc.plugin, "jobpost:" + j.id()).join().isPresent() ? "OPEN" : "CANCELLED");
-        for (var d : svc.store.pendingDeliveries()) {
-            if (svc.api.findByReference(svc.plugin, "job:" + d.jobId() + ":" + d.id()).join().isPresent()) svc.store.finishDelivery(d.id(), d.jobId(), d.player(), d.qty());
-            else svc.store.failDelivery(d.id());
+        for (var d : svc.store.deliveries("PENDING")) {
+            if (!svc.api.findByReference(svc.plugin, "job:" + d.jobId() + ":" + d.id()).join().isPresent()) { svc.store.failDelivery(d.id()); continue; }
+            Job j = svc.store.job(d.jobId());
+            svc.store.finishDelivery(d.id(), d.jobId(), d.player(), d.qty(), svc.targetStock, j.project() != null);
+        }
+        for (var d : svc.store.deliveries("CHEST")) {   // paid, but the items never reached the project chest
+            Job j = svc.store.job(d.jobId());
+            toChest(d.id(), j.project(), j.item(), d.qty(), d.player());
         }
     }
 }

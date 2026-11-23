@@ -201,6 +201,21 @@ public final class Store implements AutoCloseable {
 
     public void lock(UUID p, String item, int delta) { exec("UPDATE stash SET locked = locked + ? WHERE uuid=? AND item=?", delta, p.toString(), item); }
 
+    /** Adds items that are still in the player's inventory, locked so nothing can spend them before they really leave it. */
+    public void hold(UUID p, String item, int n) {
+        exec(upsert("INSERT INTO stash (uuid, item, qty, locked) VALUES (?,?,?,?)", "uuid, item", "qty = stash.qty + ?, locked = stash.locked + ?"), p.toString(), item, n, n, n, n);
+    }
+
+    /** Ends a hold of {@code held} locked items, removing {@code removed} of them (those that never left, or that did leave, the inventory). */
+    public void settleHold(UUID p, String item, int held, int removed) {
+        exec("UPDATE stash SET qty = qty - ?, locked = locked - ? WHERE uuid=? AND item=?", removed, held, p.toString(), item);
+    }
+
+    /** At start: locks are only what open listings still need, so a hold that a crash left unsettled keeps its items in the Stash. */
+    public void releaseHolds() {
+        exec("UPDATE stash SET locked = COALESCE((SELECT SUM(o.qty - o.filled) FROM orders o WHERE o.owner = stash.uuid AND o.item = stash.item AND o.side = 'SELL' AND o.status = 'OPEN'), 0)");
+    }
+
     /** Stash stacks in use, counting each item as ceil(qty / stackSize). */
     public int stashStacks(UUID p, Function<String, Integer> stackSize) {
         int stacks = 0;
@@ -409,23 +424,30 @@ public final class Store implements AutoCloseable {
 
     public void failDelivery(long id) { exec("UPDATE job_deliveries SET status='FAILED' WHERE id=?", id); }
 
-    /** Takes the delivered items from the deliverer's stash, adds them to the job (and the poster's stash), closes a finished job. */
-    public void finishDelivery(long deliveryId, long jobId, UUID p, int qty) {
+    /**
+     * Takes the delivered items from the deliverer's stash, adds them to the job (and the poster's stash) and closes a finished job, in one
+     * transaction. A "the town needs" delivery also uses up as many of the server's own items, never below {@code target} (market/Plan.md
+     * §5.8). A delivery bound for a project chest stays CHEST until the items are in it ({@link #deliveryStatus}).
+     */
+    public void finishDelivery(long deliveryId, long jobId, UUID p, int qty, long target, boolean toChest) {
         tx(() -> {
             Job j = job(jobId);
             exec("UPDATE stash SET qty = qty - ? WHERE uuid=? AND item=?", qty, p.toString(), j.item());
             if (j.poster() != null) deposit(UUID.fromString(j.poster()), j.item(), qty);
+            else if (j.project() == null) { long surplus = stock(j.item()) - target; if (surplus > 0) addStock(j.item(), -Math.min(qty, surplus)); }
             exec("UPDATE jobs SET status = CASE WHEN qty_done + ? >= qty_total THEN 'DONE' ELSE status END, qty_done = qty_done + ? WHERE id=?", qty, qty, jobId);   // status first: MySQL applies SET left to right
-            exec("UPDATE job_deliveries SET status='DONE' WHERE id=?", deliveryId);
+            exec("UPDATE job_deliveries SET status=? WHERE id=?", toChest ? "CHEST" : "DONE", deliveryId);
         });
     }
 
     public record Delivery(long id, long jobId, UUID player, int qty) {}
 
-    /** Deliveries that were in flight at a crash. */
-    public List<Delivery> pendingDeliveries() {
-        return query("SELECT id, job_id, uuid, qty FROM job_deliveries WHERE status='PENDING'", rs -> new Delivery(l(rs, "id"), l(rs, "job_id"), UUID.fromString(s(rs, "uuid")), (int) l(rs, "qty")));
+    /** Deliveries in one status: PENDING ones were in flight at a crash, CHEST ones are paid for but not yet in their project chest. */
+    public List<Delivery> deliveries(String status) {
+        return query("SELECT id, job_id, uuid, qty FROM job_deliveries WHERE status=?", rs -> new Delivery(l(rs, "id"), l(rs, "job_id"), UUID.fromString(s(rs, "uuid")), (int) l(rs, "qty")), status);
     }
+
+    public void deliveryStatus(long id, String status) { exec("UPDATE job_deliveries SET status=? WHERE id=?", status, id); }
 
     public long serverJobPaidToday(long day) { return one("SELECT COALESCE(SUM(paid), 0) FROM job_deliveries WHERE server=1 AND day=? AND status<>'FAILED'", day); }
 

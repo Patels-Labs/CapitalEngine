@@ -292,6 +292,24 @@ public final class MarketService implements AutoCloseable {
         return run(() -> { int n = Math.min(qty, store.stashFree(p, item)); if (n > 0) store.withdraw(p, item, n); return n; });
     }
 
+    /**
+     * Inventory to Stash, step one: records {@code qty} items that are still in the inventory, held so they can't be spent yet.
+     * The caller then takes them out and calls {@link #settle}; a crash in between leaves them in the Stash, never nowhere. False if full.
+     */
+    public CompletableFuture<Boolean> holdIn(UUID p, String item, int qty) {
+        return run(() -> { if (!fits(p, item, qty)) return false; store.hold(p, item, qty); return true; });
+    }
+
+    /** Stash to inventory, step one: holds up to {@code qty} free items and returns how many. The caller gives them and calls {@link #settle}. */
+    public CompletableFuture<Integer> holdOut(UUID p, String item, int qty) {
+        return run(() -> { int n = Math.min(qty, store.stashFree(p, item)); if (n > 0) store.lock(p, item, n); return n; });
+    }
+
+    /** Ends a hold of {@code held} items, of which {@code removed} leave the Stash. */
+    public CompletableFuture<Void> settle(UUID p, String item, int held, int removed) {
+        return run(() -> { store.settleHold(p, item, held, removed); return null; });
+    }
+
     public CompletableFuture<Map<String, int[]>> stash(UUID p) { return run(() -> store.stash(p)); }
 
     // ---- trading -----------------------------------------------------------------------------------------------
@@ -440,6 +458,7 @@ public final class MarketService implements AutoCloseable {
             }
             for (Store.OrderRow o : store.orders("SELECT * FROM orders WHERE status='PENDING'"))
                 store.orderStatus(o.id(), api.findByReference(plugin, "ord:" + o.id()).join().isPresent() ? "OPEN" : "CANCELLED");
+            store.releaseHolds();   // Stash moves a crash interrupted keep their items in the Stash
             applyValues(recipes, false);
             flood.load(store.floodAll());
             jobs.recover();
