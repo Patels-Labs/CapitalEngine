@@ -2,15 +2,17 @@
 
 Every CapitalEngine plugin, and any add-on that wants to look like part of the family, uses the same **frame** with its own **emblem** in the middle. The frame says "this is CapitalEngine"; the emblem says which plugin it is.
 
-| Frame template | CapitalEngine (core) |
-|---|---|
-| ![frame](icons/frame-template-512.png) | ![core](icons/capitalengine-512.png) |
+| Frame template | CapitalEngine | CapitalMarket |
+|---|---|---|
+| ![frame](icons/frame-template-512.png) | ![core](icons/capitalengine-512.png) | ![market](icons/market-512.png) |
+| **CapitalBank** | **CapitalDashboard** | **CapitalTrade** |
+| ![bank](icons/bank-512.png) | ![dashboard](icons/dashboard-512.png) | ![trade](icons/trade-512.png) |
 
 ## Files
 | Path | What |
 |---|---|
 | `src/frame.aseprite` | The frame on its own (layer `frame`). Start every new icon from a copy of this. |
-| `src/core.aseprite` | CapitalEngine's icon: layers `frame` and `emblem`. |
+| `src/<name>.aseprite` | Each plugin's icon (`core`, `market`, `bank`, `dashboard`, `trade`), with layers `frame` (never edited), `shadow` and `emblem`. |
 | `icons/<name>-64.png` | The pixel-exact icon. |
 | `icons/<name>-512.png` | The same, scaled 8x with nearest-neighbour, for Modrinth, Hangar, CurseForge and GitHub. |
 
@@ -34,23 +36,26 @@ Every CapitalEngine plugin, and any add-on that wants to look like part of the f
 | Frame green | `#2A7461` lattice, `#1F5E4E` base, `#174A3D` shade, `#123B31` emblem shadow |
 | Coin gold (emblems) | `#FFE58A` `#F7C948` `#D99A2B` `#C98422` `#9A5E16`, outline `#3A2008` |
 
-## Planned emblems
+## Official emblems
 | Plugin | Emblem |
 |---|---|
-| CapitalEngine (core) | A stack of coins (done) |
-| CapitalMarket | A market stall with a striped awning |
-| CapitalBank | A round vault door |
-| CapitalDashboard | A small screen showing a rising chart |
-| CapitalTrade | A ship's anchor, or a crate on a dock |
+| CapitalEngine (core) | A stack of coins |
+| CapitalMarket | A market stall with a striped awning and goods on the counter |
+| CapitalBank | A round steel vault door with a brass wheel |
+| CapitalDashboard | A screen showing rising bars and a trend arrow |
+| CapitalTrade | A ship's anchor with a rope coil |
+
+Steel and screen colours are allowed when they are much lighter or darker than the green, as in Bank, Dashboard and Trade.
 
 ## Using the style for your own add-on
 **Proposed. The owner has not decided yet.**
 
 - **Free to use:** the frame template, the palette and this guide, under **CC BY 4.0**. Make your own emblem, put it in the frame, and credit "Frame by the CapitalEngine project".
 - **Reserved:** the CapitalEngine name, the official emblems and the official icons (core, Market, Bank, Dashboard, Trade) are not under the GPL or CC BY. Don't use them as your own add-on's icon.
+
 ## Naming your add-on
 Any add-on, official or not, may be called `Capital<Word>` (for example CapitalAuctions or CapitalQuests), as long as:
 
 1. **It says it is unofficial.** Your project page and README must carry this statement, or one with the same meaning:
    > This project is not associated or affiliated with CapitalEngine or its owners, Heet Patel and Patel's Labs.
-2. **It doesn't reuse an official plugin's name.** These belong to the official plugins: CapitalEngine, CapitalMarket, CapitalBank, CapitalDashboard and CapitalTrade, plus the planned official add-ons in [Plan.md §11](../Plan.md) (CapitalBusiness, CapitalStocks, CapitalBanks+, CapitalBonds, CapitalCash, CapitalNations, CapitalTax and CapitalCredit). The list grows as official add-ons are added.
+2. **It doesn't reuse an official plugin's name.** These belong to the official plugins: CapitalEngine, CapitalMarket, CapitalBank, CapitalDashboard and CapitalTrade, plus the planned official add-ons in [Plan.md §11](../Plan.md) (CapitalBusiness, CapitalStocks, CapitalBanks+, CapitalBonds, CapitalCash, CapitalNations, CapitalTax and CapitalCredit). This list is fixed and will not grow: if an official add-on is ever made later, it will take a name that isn't already used, so nobody's `Capital<Word>` add-on has to be renamed.
