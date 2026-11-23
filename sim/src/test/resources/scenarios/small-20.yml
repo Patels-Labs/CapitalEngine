@@ -1,16 +1,23 @@
-# A healthy mix of 20 players.
+# A healthy mix of 20 players with CapitalBank: savers, borrowers and land upkeep (sim/Plan.md §5.4).
 name: small-20
 seed: 42
 days: 60
-players: { miner: 5, farmer: 5, trader: 2, builder: 2, idler: 6 }
+plugins: [market, bank]
+players: { miner: 5, farmer: 5, trader: 2, saver: 3, borrower: 2, builder: 1, idler: 2 }
 online-chance: { default: 0.6, idler: 0.15 }
 production:
   miner: { iron_ingot: 48, coal: 64, diamond: 1 }
   farmer: { wheat: 192, carrot: 128 }
+  saver: { iron_ingot: 16, wheat: 64 }
+  borrower: { coal: 32, wheat: 32 }
   builder: { iron_ingot: 32 }
   idler: { wheat: 32 }
+# Claimed land in blocks² (each player gets the role's figure, give or take half); 10,000 are free, so only big farms and builds pay upkeep.
+land: { farmer: 12000, builder: 25000, miner: 6000, idler: 1500, default: 4000 }
 projects:
   spawn-railway: { iron_ingot: 800 }
+config:
+  sim.borrower-reliability: 0.9
 # Bands below are a regression envelope around what the defaults do today (see sim/RESULTS.md), not a claim of good economics:
 # the plan's stricter defaults (3pp inflation, 15% monthly growth, 5% unmet) are not met yet by this agent model.
 bands:

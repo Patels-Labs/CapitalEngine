@@ -16,7 +16,13 @@ final class Report {
         StringBuilder md = new StringBuilder("# ").append(r.scenario().name()).append(r.passed() ? ": PASS" : ": FAIL").append("\n\n");
         md.append("Seed ").append(r.scenario().seed()).append(", ").append(r.scenario().days()).append(" days.\n\n");
         md.append(String.format("- money supply: %.2f coins%n- Treasury: %.2f coins%n- weekly inflation: %.2f%%%n- savings rate: %.2f%% a week%n- player trade share: %.0f%%%n- server price gap: %.0f%%%n- unmet needs: %.1f%%%n- Gini: %.2f%n",
-                last[1] / 100, last[3] / 100, last[10], last[11], last[13] * 100, last[12] * 100, last[21] * 100, last[18]));
+                last[1] / 100, last[3] / 100, last[10], last[11], last[13], last[12], last[21] * 100, last[18]));
+        double interest = 0, upkeep = 0, exports = 0, imports = 0, tariffs = 0;
+        for (double[] x : r.rows()) { interest += x[Simulation.INTEREST]; upkeep += x[Simulation.UPKEEP]; exports += x[Simulation.EXPORTS]; imports += x[Simulation.IMPORTS]; tariffs += x[Simulation.TARIFFS]; }
+        md.append("- plugins: ").append(String.join(", ", r.scenario().plugins())).append('\n');
+        if (r.scenario().has("bank")) md.append(String.format("- savings: %.2f coins; coins lent out: %.2f; loans behind: %.0f; written off: %.0f%n- interest paid: %.2f coins; land upkeep collected: %.2f coins%n",
+                last[Simulation.SAVINGS] / 100, last[Simulation.LOAN_BOOK] / 100, last[Simulation.OVERDUE], last[Simulation.WRITTEN_OFF], interest / 100, upkeep / 100));
+        if (r.scenario().has("trade")) md.append(String.format("- exports: %.2f coins; imports: %.2f coins (%.2f of it tariffs)%n", exports / 100, imports / 100, tariffs / 100));
         md.append("\n## End state of the items agents trade\n");
         r.items().forEach(i -> md.append("- ").append(i).append('\n'));
         md.append("\n## Why needs went unmet\n");

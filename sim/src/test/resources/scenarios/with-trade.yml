@@ -1,0 +1,31 @@
+# small-20 with CapitalTrade as well, and a 10-day farm flood: cheap Market wheat is bought and exported, which puts a floor under its
+# price (trade/Plan.md §11), imports of iron are a money sink, and quotas cap the money exports create.
+name: with-trade
+seed: 42
+days: 70
+plugins: [market, bank, trade]
+players: { miner: 5, farmer: 5, trader: 2, saver: 3, borrower: 2, builder: 1, idler: 2 }
+online-chance: { default: 0.6, idler: 0.15 }
+production:
+  miner: { iron_ingot: 48, coal: 64, diamond: 1 }
+  farmer: { wheat: 192, carrot: 128 }
+  saver: { iron_ingot: 16, wheat: 64 }
+  borrower: { coal: 32, wheat: 32 }
+  builder: { iron_ingot: 32 }
+  idler: { wheat: 32 }
+land: { farmer: 12000, builder: 25000, miner: 6000, idler: 1500, default: 4000 }
+projects:
+  spawn-railway: { iron_ingot: 800 }
+events:
+  - { day: 30, type: production-multiplier, role: farmer, x: 20 }
+  - { day: 40, type: production-multiplier, role: farmer, x: 1 }
+# Imports are off by default in CapitalTrade; this scenario lists iron, dearer than the Market, for needs the Market can't meet.
+trade-imports:
+  iron_ingot: { base: 8, quota-per-active-player: 4, tariff: 0.25 }
+config:
+  sim.borrower-reliability: 0.9
+  sim.watch: coal         # the item miners make more of than anyone uses: its Market price shows the floor exports give
+bands:
+  weekly-inflation-abs-after-warmup: 0.35
+  max-monthly-growth: 3.0
+  max-unmet-needs: 0.25

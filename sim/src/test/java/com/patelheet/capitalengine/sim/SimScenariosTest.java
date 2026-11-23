@@ -19,9 +19,39 @@ class SimScenariosTest {
         assertTrue(r.passed(), r.failures().toString());
     }
 
+    /** small-20 has CapitalBank: every day the bank check is clean, interest stays within its caps and budget, and no loan traps anyone. */
     @Test void healthyTwentyPlayerEconomyStaysInBand() throws Exception {
         var r = run("small-20", 60, Map.of());
         assertTrue(r.passed(), r.failures().toString());
+        assertTrue(total(r, Simulation.INTEREST) > 0, "savers earn interest");
+        assertTrue(total(r, Simulation.UPKEEP) > 0, "big land owners pay upkeep");
+        assertTrue(r.rows().stream().anyMatch(x -> x[Simulation.LOAN_BOOK] > 0), "borrowers borrow");
+    }
+
+    private static double total(Simulation.Result r, int col) { return r.rows().stream().mapToDouble(x -> x[col]).sum(); }
+
+    /**
+     * trade/Plan.md §11: with CapitalMarket installed, cheap Market items are bought and exported, which lifts the Market price toward the
+     * world price. The same seed with and without CapitalTrade: coal, which miners make more of than anyone uses, sells to the server for
+     * far below its world price without Trade, and close to it with Trade. Imports are a money sink and exports stay inside their limits.
+     */
+    @Test void exportsPutAFloorUnderMarketPrices() throws Exception {
+        Scenario sc = SimMain.load("with-trade.yml");
+        var on = new Simulation(sc).run();
+        var off = new Simulation(sc.withPlugins(java.util.List.of("market", "bank"))).run();
+        Report.write(on, "ci");
+        assertTrue(on.passed(), on.failures().toString());
+        double exported = on.rows().get(on.rows().size() - 1)[Simulation.WATCH_EXPORTED];
+        double bidOn = avg(on, Simulation.WATCH_BID, 29), bidOff = avg(off, Simulation.WATCH_BID, 29), world = avg(on, Simulation.WATCH_WORLD, 29);
+        assertTrue(exported > 0, "players export coal");
+        assertTrue(bidOn >= 0.8 * world, "with Trade the server pays close to the world price for coal: " + bidOn + " vs world " + world);
+        assertTrue(bidOff < 0.5 * world && bidOn > 1.5 * bidOff, "without Trade coal sells for much less: " + bidOff + " vs " + bidOn + " with Trade");
+        assertTrue(total(on, Simulation.IMPORTS) > total(on, Simulation.TARIFFS) && total(on, Simulation.TARIFFS) > 0, "imports destroy coins and pay tariffs to the Treasury");
+    }
+
+    /** The average of a column from {@code fromDay} to the end. */
+    private static double avg(Simulation.Result r, int col, int fromDay) {
+        return r.rows().stream().filter(x -> x[0] >= fromDay).mapToDouble(x -> x[col]).average().orElseThrow();
     }
 
     /** One 70-day run (the flood is days 30 to 39) covers the books, the server's stock during the flood, and the recovery after it. */
@@ -38,8 +68,9 @@ class SimScenariosTest {
         return r.rows().stream().filter(x -> x[0] >= firstDay && x[0] < firstDay + 7).mapToDouble(x -> x[23]).average().orElseThrow();
     }
 
+    /** with-trade has every plugin, so this covers the bank's day run and exports as well as the market. */
     @Test void theSameSeedGivesTheSameRun() throws Exception {
-        String a = run("tiny-2", 20, Map.of()).csv(), b = run("tiny-2", 20, Map.of()).csv();
+        String a = run("with-trade", 20, Map.of()).csv(), b = run("with-trade", 20, Map.of()).csv();
         assertEquals(a.length() == b.length() && a.equals(b) ? "" : firstDifference(a, b), "", "two runs of one seed must match");
     }
 
@@ -79,12 +110,18 @@ class SimScenariosTest {
             rows.add(r);
         }
         asserts.daily(5, rows.get(4), new long[]{7, 2}, new long[]{100, 90, 5, 6});
+        asserts.bank(6, java.util.List.of("loan #3: its payout is not in the ledger"), 500, 400, 450, java.util.List.of("loan #4 is 40 days old"));
+        rows.get(6)[Simulation.EXPORTS] = 6000;
+        asserts.trade(7, rows.get(6), 5000);
         asserts.finish(rows, java.util.List.of("balance mismatch"));
         String all = String.join("\n", failures);
-        for (String expected : new String[]{"add up to 7", "2 account(s) below zero", "market escrow holds 100", "jobs escrow holds 5", "audit: balance mismatch", "weekly inflation", "money grew", "unmet"})
+        for (String expected : new String[]{"add up to 7", "2 account(s) below zero", "market escrow holds 100", "jobs escrow holds 5", "audit: balance mismatch", "weekly inflation", "money grew", "unmet",
+                "bank check: loan #3", "more than capped savings", "over the day's budget", "loan #4 is 40 days old", "exports created 6000"})
             assertTrue(all.contains(expected), expected + " should have been reported, got:\n" + all);
         var quiet = new java.util.ArrayList<String>();
         new Asserts(sc, quiet).daily(1, new double[Simulation.COLUMNS.size()], new long[]{0, 0}, new long[]{1, 1, 2, 2});
+        new Asserts(sc, quiet).bank(1, java.util.List.of(), 100, 100, 100, java.util.List.of());
+        new Asserts(sc, quiet).trade(1, new double[Simulation.COLUMNS.size()], 5000);
         assertTrue(quiet.isEmpty(), "a healthy day reports nothing");
     }
 }

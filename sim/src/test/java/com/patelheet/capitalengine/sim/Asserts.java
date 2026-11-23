@@ -27,6 +27,22 @@ final class Asserts {
         if (escrow[2] != escrow[3]) fail(day, "jobs escrow holds " + escrow[2] + " but open jobs need " + escrow[3]);
     }
 
+    /**
+     * The bank, every day: its own check against the ledger is clean, interest stays within the capped savings at the highest rate and within
+     * the day's budget, and no loan outlives its term plus the write-off days (a loan can never trap a player; at worst borrowing pauses).
+     */
+    void bank(int day, List<String> problems, long interestPaid, long interestBound, long budget, List<String> trapped) {
+        problems.forEach(p -> fail(day, "bank check: " + p));
+        if (interestPaid > interestBound) fail(day, "the bank paid " + interestPaid + " interest, more than capped savings at the highest rate allow (" + interestBound + ")");
+        if (interestPaid > budget) fail(day, "the bank paid " + interestPaid + " interest, over the day's budget of " + budget);
+        trapped.forEach(t -> fail(day, t));
+    }
+
+    /** Exports never create more than Trade's daily budget and core's cap allow. */
+    void trade(int day, double[] row, long budget) {
+        if (row[Simulation.EXPORTS] > budget) fail(day, String.format("exports created %.0f, over the daily limit of %d", row[Simulation.EXPORTS], budget));
+    }
+
     /** Bands that need the whole run. Inflation and growth are judged once, on the run as a whole, after the warm-up. */
     void finish(List<double[]> rows, List<String> auditProblems) {
         auditProblems.forEach(p -> fail(rows.size(), "audit: " + p));
