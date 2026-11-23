@@ -4,6 +4,8 @@ dependencies {
     testImplementation(project(":api"))
     testImplementation(project(":core"))
     testImplementation(project(":market"))
+    testImplementation(project(":bank"))
+    testImplementation(project(":trade"))
     testImplementation(libs.vault.unlocked)
     testImplementation(libs.hikari)
     testImplementation(libs.sqlite)
