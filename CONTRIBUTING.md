@@ -9,7 +9,7 @@ Thanks for helping. This page covers what a pull request needs; [CLAUDE.md](CLAU
 
 ## Rules that reviews check
 - **Money is a `long`** count of the smallest unit. Never `double` or `float`.
-- **Add-ons talk to core only through the API** and never depend on each other.
+- **Add-ons talk to core only through the API.** The four main add-ons (Market, Bank, Dashboard, Trade) never depend on each other. A future add-on may require the one it extends, such as Stocks on Business or Banks+ on Bank.
 - **Compile against Paper 1.21.11's API.** No NMS, no experimental APIs.
 - **Player text is plain and kid-friendly,** lives in `messages.yml`, and new top-level entries go on one line.
 - **No new dependencies** without asking in an issue first.

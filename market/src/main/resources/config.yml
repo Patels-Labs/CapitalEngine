@@ -33,7 +33,7 @@ jobs:
 autopilot:
   target-monthly-inflation: 0.02
   target-growth-monthly: 0.03
-  floor-per-active-player: 150   # coins/day of new money per active player
+  floor-per-active-player: 100   # coins/day of new money per active player
   rate: { start-weekly: 0.02, min-weekly: 0.0, max-weekly: 0.08 }
   warmup-weeks: 2
   split-jobs-vs-buyer: 0.6

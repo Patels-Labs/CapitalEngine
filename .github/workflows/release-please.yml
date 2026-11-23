@@ -1,4 +1,4 @@
-# Keeps one release PR open for every module with releasable changes (api, core, market), built from the Conventional Commit titles
+# Keeps one release PR open for every module with releasable changes (api, core, market, bank, dashboard, trade), built from the Conventional Commit titles
 # merged to main; it grows as more changes merge. Merging it bumps each module's <module>/version.txt, writes <module>/CHANGELOG.md,
 # tags <module>-v<version> and creates one GitHub Release per module;
 # this workflow then calls the module's release workflow to build it and attach the jar (api also stages the public Maven release).
@@ -22,6 +22,9 @@ jobs:
       api_tag: ${{ steps.rp.outputs['api--tag_name'] }}
       core_tag: ${{ steps.rp.outputs['core--tag_name'] }}
       market_tag: ${{ steps.rp.outputs['market--tag_name'] }}
+      bank_tag: ${{ steps.rp.outputs['bank--tag_name'] }}
+      dashboard_tag: ${{ steps.rp.outputs['dashboard--tag_name'] }}
+      trade_tag: ${{ steps.rp.outputs['trade--tag_name'] }}
     steps:
       - id: rp
         uses: googleapis/release-please-action@v4
@@ -41,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { ref: "${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}" }
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with: { distribution: temurin, java-version: 21 }
       - uses: gradle/actions/setup-gradle@v6
       - id: build
@@ -72,3 +75,18 @@ jobs:
     if: needs.release-please.outputs.market_tag != ''
     uses: ./.github/workflows/release-plugin.yml
     with: { module: market, tag: "${{ needs.release-please.outputs.market_tag }}" }
+  bank:
+    needs: release-please
+    if: needs.release-please.outputs.bank_tag != ''
+    uses: ./.github/workflows/release-plugin.yml
+    with: { module: bank, tag: "${{ needs.release-please.outputs.bank_tag }}" }
+  dashboard:
+    needs: release-please
+    if: needs.release-please.outputs.dashboard_tag != ''
+    uses: ./.github/workflows/release-plugin.yml
+    with: { module: dashboard, tag: "${{ needs.release-please.outputs.dashboard_tag }}" }
+  trade:
+    needs: release-please
+    if: needs.release-please.outputs.trade_tag != ''
+    uses: ./.github/workflows/release-plugin.yml
+    with: { module: trade, tag: "${{ needs.release-please.outputs.trade_tag }}" }

@@ -285,7 +285,7 @@ jobs: { player-job-expiry-days: 7, server-premium: 0.10, oversupply-factor: 2.0 
 autopilot:
   target-monthly-inflation: 0.02           # → weekly target
   target-growth-monthly: 0.03
-  floor-per-active-player: 150             # coins/day of new money per active player
+  floor-per-active-player: 100             # coins/day of new money per active player
   rate: { start-weekly: 0.02, min-weekly: 0.0, max-weekly: 0.08 }
   warmup-weeks: 2
   split-jobs-vs-buyer: 0.6

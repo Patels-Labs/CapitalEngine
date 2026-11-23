@@ -4,9 +4,15 @@
 > **Parent plan:** [../Plan.md](../Plan.md)
 
 ## 0. Build status
-**Built (market only):** `Simulation`, `Scenario`, `Agent` (Miner, Farmer, Trader, Builder, Idler, in one class), `Asserts`, `Report`, `SimMain`, `RESULTS.md`, and the scenarios `tiny-2`, `small-20`, `farm-flood`, `everyone-quits`, `no-bank` and `big-200`. `:sim:test` runs the first three plus determinism, an empty server and a band self-check in about 10 seconds.
-**Differences:** agents also *spend* (a share of spare coins buys what other roles make, then uses it up), because without it nothing recycles through the Treasury; `Agent.Role` is an enum, not a class per role; the month-by-month `with-trade` scenario and the Saver/Borrower roles wait for Bank and Trade; market's expiries use the economic day so a run can cover months; market keeps its own 7-day active-player average from the Day events so a run repeats exactly.
-**Known gap:** a config that breaks the economy could not be found, so the "bands catch it" test uses synthetic data (see `RESULTS.md`).
+**Built:** `Simulation`, `Scenario`, `Agent` (all seven roles, in one class), `Asserts`, `Report`, `SimMain`, `RESULTS.md`, and the seven scenarios `tiny-2`, `small-20` (with CapitalBank), `big-200`, `farm-flood`, `everyone-quits`, `no-bank` and `with-trade` (with CapitalBank and CapitalTrade). `:sim:test` runs `tiny-2`, `small-20` (twice: once with a low interest cap so the cap binds), `farm-flood`, `with-trade` with and without Trade, a determinism check on `with-trade`, an empty server and a band self-check, in 20 to 50 seconds.
+**Differences:**
+- Agents also *spend* (a share of spare coins buys what other roles make, then uses it up), because without it nothing recycles through the Treasury. `Agent.Role` is an enum, not a class per role.
+- Every agent owns land (the scenario's `land:` section per role, give or take half). **The sim runs the bank's day itself** (`BankService.onDay` with the agents' land and who was online), after the market's day has settled, instead of letting the bank's Day listener do it: two workers moving money at once would make a run unrepeatable, and MockBukkit has no claim plugin. The bank's "coins arriving" collection is switched off for the same reason (it debounces on the wall clock); the daily collection still takes arrears and upkeep.
+- **Saver:** every third active day, half of the wallet above a 20-coin reserve goes into savings; a wallet below the reserve is topped up from savings. **Borrower:** takes the largest loan offered whenever it has none; with chance `1 − sim.borrower-reliability` (default 0.9) a loan isn't repaid on time, and that borrower spends every coin as it comes in until the loan ends.
+- With Trade, every role exports from its Stash while the ships pay more than the server's Quick Sell, traders also buy player listings below what the ships pay and export them, and a need the Market can't meet is imported if the scenario lists the item (`trade-imports:`). Cargo goes straight back into the Stash.
+- Settings are named by module (`market.`, `bank.`, `trade.`, `core.`, or `sim.` for the agents), a key that isn't in that module's `config.yml` is refused, and `SimMain` takes several `--sweep`s (every combination), `--set`, `--plugins` and `--seeds`.
+- Market's expiries use the economic day so a run can cover months; market keeps its own 7-day active-player average from the Day events so a run repeats exactly.
+**Known gap:** the inflation, growth and unmet-needs bands in the scenario files are a regression envelope around today's behaviour, not the targets in §5.6, which no default meets yet (`RESULTS.md` explains why the growth band can't be met on a new server).
 
 ## 1. Purpose and scope
 The simulator answers **"does this economy stay sane?"** before real players find out the hard way. It:
@@ -38,9 +44,8 @@ sim/
 ├─ src/test/java/com/patelheet/capitalengine/sim/
 │  ├─ Simulation            boots MockBukkit, loads plugins, runs days, collects metrics
 │  ├─ Scenario              YAML → scenario model (players by role, days, events, config overrides, seed)
-│  ├─ agents/
-│  │  ├─ Agent              base: online chance, daily activity minutes, needs (food/tools), RNG
-│  │  ├─ Miner  Farmer  Trader  Saver  Borrower  Builder  Idler
+│  ├─ Agent                 one class: online chance, daily activity minutes, needs (food/tools), RNG,
+│  │                        and the roles Miner Farmer Trader Saver Borrower Builder Idler
 │  ├─ Metrics               per-day row from api.stats(), indicators, and sim-side extras (Gini, avg balance)
 │  ├─ Assertions            band checks → pass/fail with reasons
 │  ├─ Report                daily.csv + summary.md
@@ -84,8 +89,8 @@ for day in 1..N:
 | **Miner** | Ores and ingots (iron common, diamond rare) | Quick Sells most output. With probability p, lists at server `ref × U(0.9, 1.1)` instead. |
 | **Farmer** | Crops and food (high volume) | Quick Sells, and delivers to server "town needs" jobs when they pay better than the server's bid |
 | **Trader** | Nothing | Buys when an ask is below the 4-week VWAP × 0.9, relists at VWAP. If Trade is on, exports when the world price beats the Market bid. |
-| **Saver** | Some mixed output | Sells, then deposits 50% of its wallet into savings every few days |
-| **Borrower** | Some mixed output | Takes a loan up to its limit. Repays reliably with probability `reliability` (scenario-set). |
+| **Saver** | Some mixed output | Sells, then deposits 50% of its spare wallet into savings every third day; withdraws when the wallet runs low |
+| **Borrower** | Some mixed output | Takes a loan up to its limit. Repays reliably with probability `sim.borrower-reliability` (scenario-set, 0.9); otherwise spends every coin until the loan ends. |
 | **Builder** | Nothing | Buys materials for owner projects and delivers them to project jobs |
 | **Idler** | A little | Online 1 day in 7. Becomes dormant in "quits" scenarios. |
 
@@ -115,12 +120,12 @@ Bundled scenarios:
 | Scenario | What it checks |
 |---|---|
 | `tiny-2` | The market maker carries the market. Money growth is driven by the per-player floor and stays small. |
-| `small-20` | A healthy mix. Inflation converges to target. |
+| `small-20` | A healthy mix with CapitalBank. The bank check passes every day, interest stays within its caps and budget, and no loan traps a player. |
 | `big-200` | Player trade share > 60%, the server's gap widens to ≥ 0.4, and most savings interest is Treasury-funded. |
 | `farm-flood` | "The town needs" jobs use up the surplus from server stock (it stays under 4x the target), and the wheat price is back within 10% (weekly average) 4 weeks after the flood ends. |
 | `everyone-quits` | Active money supply drops, daily new money falls toward floor × active players, and nothing explodes. |
-| `no-bank` | Market's autopilot reallocates the savings share, and money growth stays within band. |
-| `with-trade` | Exports put a floor under Market prices, imports are a net money sink, and quotas cap the money printed. |
+| `no-bank` | `small-20`'s players and seed without CapitalBank: Market's autopilot reallocates the savings share, and money growth stays within band. |
+| `with-trade` | `small-20` plus CapitalTrade and a farm flood. Exports put a floor under Market prices (coal's server price stays near its world price; on the same seed without Trade it falls well below), imports are a net money sink, and exports stay inside their daily limit. |
 
 ### 5.5 Metrics (`daily.csv`, one row per day)
 - **From core `stats()`:**
@@ -160,7 +165,7 @@ Bundled scenarios:
 The results go to `summary.md`: pass or fail per assertion, the first failing day, and key final numbers.
 
 ### 5.7 Using it to tune defaults
-`./gradlew :sim:run --args="scenarios/small-20.yml --sweep market.autopilot.floor-per-active-player=50,100,150,200"` runs the scenario once per value and writes one CSV per run plus a comparison table. Once defaults are chosen they're written back into the add-ons' shipped `config.yml`, and the CI scenarios lock them in.
+`./gradlew :sim:run --args="small-20.yml --days 90 --seeds 1,2,3 --sweep market.autopilot.floor-per-active-player=50,100,150 --sweep sim.land-scale=0.5,1,2"` runs the scenario once per combination and seed, writes one CSV per run and prints one summary line per run. Once defaults are chosen they're written back into the add-ons' shipped `config.yml`, and the CI scenarios lock them in.
 
 ## 6. Data
 Temp folders per run: plugin SQLite files, deleted afterwards unless `--keep`.
@@ -171,8 +176,8 @@ Output goes to `sim/build/sim-out/<scenario>/<timestamp>/`: `daily.csv`, `summar
 Scenario YAML only (§5.4). There's no global sim config.
 
 ## 8. Commands
-- `./gradlew :sim:test` runs `tiny-2`, `small-20` (60 days) and `farm-flood` (70 days). It's a CI gate.
-- `./gradlew :sim:run --args="<scenario.yml> [--days N] [--seed S] [--sweep key=v1,v2] [--keep]"` does long runs and sweeps.
+- `./gradlew :sim:test` runs `tiny-2`, `small-20` (60 days), `farm-flood` (70 days) and `with-trade` (70 days, with and without Trade). It's a CI gate.
+- `./gradlew :sim:run --args="<scenario.yml> [--days N] [--seed S] [--plugins market,bank,trade] [--set key=v]... [--sweep key=v1,v2]... [--seeds 1,2,3]"` does long runs and sweeps.
 
 ## 9. Threading and failure handling
 - **Everything runs on the test thread,** which MockBukkit treats as the main thread. Core's persist writer is a real thread, and the sim waits for it to drain at the end of each day.
@@ -187,10 +192,10 @@ The simulator *is* a test, and it also checks itself:
 - a deliberately broken config (for example `stock-use-rate: 0`, `floor-per-active-player: 100000`) makes the expected assertions **fail**, which proves they can catch problems
 
 ## 11. Done when
-- [ ] All seven bundled scenarios run, and the three CI scenarios pass in under 2 minutes.
-- [ ] Repeated runs with the same seed are identical.
-- [ ] The default config values in market, bank and trade are justified by sweep results, recorded in `sim/RESULTS.md`.
-- [ ] A regression, such as removing the stock use-up, fails `:sim:test`.
+- [x] All seven bundled scenarios run, and the CI scenarios pass in under 2 minutes.
+- [x] Repeated runs with the same seed are identical.
+- [ ] The default config values in market, bank and trade are justified by sweep results, recorded in `sim/RESULTS.md`. *Partly:* the settings that move money (the floor, the export budget and quotas, upkeep, interest, loan start limit, rates, the market maker and fee) are swept; the rest are listed under "Not swept" there.
+- [x] A regression, such as removing the stock use-up, fails `:sim:test`.
 
 ## 12. Open questions
 1. **Should a version be shipped to owners** as `/ce simulate <scenario>` or a CLI jar, so they can preview their own config? *Later.* It would need a non-MockBukkit runner or a bundled MockBukkit.

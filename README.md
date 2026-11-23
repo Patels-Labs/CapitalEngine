@@ -14,7 +14,7 @@ Supports Paper (and forks such as Purpur) **1.21.11 to 26.2**, with Bedrock play
 | **CapitalDashboard** | [`dashboard/`](dashboard) | Owner dashboard in game and on a local web page, alerts, Prometheus metrics | `/cdash` (owners) |
 | **CapitalTrade** | [`trade/`](trade) | Ports: exports with daily quotas, opt-in imports with tariffs | `/trade` |
 
-Install CapitalEngine, then any add-ons you want. Add-ons never depend on each other. Downloads are on the [Releases](../../releases) page; each plugin is released separately (`core-v…`, `market-v…`).
+Install CapitalEngine, then any add-ons you want. The four main add-ons (Market, Bank, Dashboard, Trade) never depend on each other. A future add-on may require the one it extends, such as Stocks on Business or Banks+ on Bank. Downloads are on the [Releases](../../releases) page; each plugin is released separately (`core-v…`, `market-v…`).
 
 Player guides: [Market](market/docs/player-guide.md), [Bank](bank/docs/player-guide.md), [Trade](trade/docs/player-guide.md). Design: [Plan.md](Plan.md).
 
@@ -48,7 +48,7 @@ Needs JDK 21 or newer. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a p
 
 CapitalEngine is free software under the [GNU GPL v3.0 only](LICENSE), with the [CapitalEngine Add-on Exception](ADDON-EXCEPTION.txt): plugins that use CapitalEngine only through its API can be released under any licence. Changes to CapitalEngine itself stay under the GPL.
 
-The licence for the CapitalEngine name, logo and icons is still being decided and will ship with the brand kit.
+Icons, the shared frame and the rules for naming your own add-on are in [branding/](branding/README.md).
 
 ---
 

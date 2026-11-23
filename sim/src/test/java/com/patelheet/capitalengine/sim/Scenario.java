@@ -9,9 +9,15 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 /** A scenario file (sim/Plan.md §5.4): who plays, for how long, what happens, and what must stay true. */
-record Scenario(String name, long seed, int days, Map<String, Integer> players, Map<String, Double> onlineChance,
+record Scenario(String name, long seed, int days, List<String> plugins, Map<String, Integer> players, Map<String, Double> onlineChance,
                 Map<String, Map<String, Integer>> production, List<Event> events, Map<String, Object> config,
-                Map<String, Object> core, Map<String, Map<String, Integer>> projects, Map<String, Double> bands) {
+                Map<String, Object> core, Map<String, Object> bank, Map<String, Object> trade, Map<String, Long> land,
+                Map<String, Object> imports, Map<String, Map<String, Integer>> projects, Map<String, Double> bands) {
+
+    /** Plugins besides CapitalEngine; every scenario has CapitalMarket, which the agents trade through. */
+    static final List<String> ADD_ONS = List.of("market", "bank", "trade");
+
+    boolean has(String plugin) { return plugins.contains(plugin); }
 
     /** {@code share} is for go-dormant, {@code x} for production-multiplier. */
     record Event(int day, String type, String role, double x, double share) {}
@@ -48,8 +54,14 @@ record Scenario(String name, long seed, int days, Map<String, Integer> players, 
                     e.get("x") == null ? 1 : ((Number) e.get("x")).doubleValue(), e.get("share") == null ? 0 : ((Number) e.get("share")).doubleValue()));
         Map<String, Double> bands = new LinkedHashMap<>(DEFAULT_BANDS);
         section(y, "bands").forEach((k, v) -> bands.put(k, ((Number) v).doubleValue()));
-        return new Scenario(y.getString("name", "scenario"), y.getLong("seed", 1), y.getInt("days", 60), players, online, production, events,
-                section(y, "config"), section(y, "core"), projects, bands);
+        Map<String, Long> land = new LinkedHashMap<>();
+        section(y, "land").forEach((k, v) -> land.put(k, ((Number) v).longValue()));
+        List<String> plugins = y.isList("plugins") ? y.getStringList("plugins") : List.of("market");
+        for (String p : plugins) if (!ADD_ONS.contains(p)) throw new IllegalArgumentException("Unknown plugin " + p + " (use " + ADD_ONS + ")");
+        if (!plugins.contains("market")) throw new IllegalArgumentException("The agents trade through CapitalMarket, so plugins must include market");
+        ConfigurationSection imp = y.getConfigurationSection("trade-imports");
+        return new Scenario(y.getString("name", "scenario"), y.getLong("seed", 1), y.getInt("days", 60), List.copyOf(plugins), players, online, production, events,
+                section(y, "config"), section(y, "core"), section(y, "bank"), section(y, "trade"), land, imp == null ? Map.of() : imp.getValues(true), projects, bands);
     }
 
     /** A nested section as dotted-path leaves: {@code market.autopilot.x: 1} becomes {@code "autopilot.x" -> 1}. */
@@ -60,9 +72,23 @@ record Scenario(String name, long seed, int days, Map<String, Integer> players, 
         return out;
     }
 
-    Scenario with(int days, long seed, Map<String, Object> extraConfig) {
-        Map<String, Object> cfg = new LinkedHashMap<>(config);
-        cfg.putAll(extraConfig);
-        return new Scenario(name, seed, days, players, onlineChance, production, events, cfg, core, projects, bands);
+    /**
+     * The same scenario with other settings. Keys name the module whose config they go into: {@code market.maker.k},
+     * {@code bank.savings.interest-cap}, {@code trade.exports.daily-budget}, {@code core.starter-coins}; {@code sim.*} keys steer the agents.
+     * A key without a module prefix is a market key (as in the scenario's {@code config:} section).
+     */
+    Scenario with(int days, long seed, Map<String, Object> extra) {
+        Map<String, Object> cfg = new LinkedHashMap<>(config), c = new LinkedHashMap<>(core), b = new LinkedHashMap<>(bank), t = new LinkedHashMap<>(trade);
+        extra.forEach((k, v) -> {
+            if (k.startsWith("bank.")) b.put(k.substring(5), v);
+            else if (k.startsWith("trade.")) t.put(k.substring(6), v);
+            else if (k.startsWith("core.")) c.put(k.substring(5), v);
+            else cfg.put(k.startsWith("market.") ? k.substring(7) : k, v);
+        });
+        return new Scenario(name, seed, days, plugins, players, onlineChance, production, events, cfg, c, b, t, land, imports, projects, bands);
+    }
+
+    Scenario withPlugins(List<String> p) {
+        return new Scenario(name, seed, days, List.copyOf(p), players, onlineChance, production, events, config, core, bank, trade, land, imports, projects, bands);
     }
 }
