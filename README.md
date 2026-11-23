@@ -1,6 +1,6 @@
 # CapitalEngine
 
-<a href="https://github.com/Patels-Labs"><img src="https://raw.githubusercontent.com/Patels-Labs/.github/main/brand/readme-mark.png" alt="" height="22" align="absmiddle"></a>&nbsp; A <a href="https://github.com/Patels-Labs"><b>Patel's Labs</b></a> project
+<a href="https://github.com/Patels-Labs"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Patels-Labs/.github/main/brand/badge-on-dark.png"><img alt="A Patel's Labs project" src="https://raw.githubusercontent.com/Patels-Labs/.github/main/brand/badge-on-light.png" height="40"></picture></a>
 
 A modular economy for Minecraft Paper servers. It's simple for players and works like a real economy underneath: every coin has a recorded source, players set the prices, and an optional autopilot keeps prices steady.
 
