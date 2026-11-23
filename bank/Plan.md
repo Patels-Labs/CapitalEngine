@@ -23,7 +23,7 @@
 - **Dependencies:** GriefPrevention 18.0.0 and LandsAPI 7.25.4 come from JitPack, WorldGuard 7.0.17 from EngineHub; the repositories are declared in `bank/build.gradle.kts` and limited to those groups. WorldGuard 7.0.18 and later need Java 25, so 7.0.17 is the newest that compiles with `release = 21`. All three are `compileOnly` and `softdepend`.
 - **Config:** `rates.max-*` also caps the config rates, not only the policy's.
 
-**Not tested yet:** a real server (1.21.11, 26.1.x, 26.2), a Bedrock player through Geyser, the three real claim plugins (their sources are compiled against the real APIs but only exercised through a fake), MySQL/MariaDB and PostgreSQL (the schema exists for both; tests run on SQLite), and a month-long `sim` scenario (the integration test runs a 30-day month instead; `sim` has no bank scenario yet).
+**Not tested yet:** a real server (1.21.11, 26.1.x, 26.2), a Bedrock player through Geyser, the three real claim plugins (their sources are compiled against the real APIs but only exercised through a fake), and MySQL/MariaDB and PostgreSQL (the schema exists for both; tests run on SQLite). `sim` now runs the bank every day for months (`small-20`, `with-trade`): the bank check, the interest caps and budget, and "no loan outlives its term plus the write-off days" hold on every day of every run, and no bank setting moves money growth much (see [sim/RESULTS.md](../sim/RESULTS.md) §3: upkeep goes to the Treasury and is spent again).
 
 ## 1. Purpose and scope
 CapitalBank is the server's simple, kid-safe bank. It covers:
@@ -237,7 +237,7 @@ PlaceholderAPI: `%capitalbank_savings%`, `%capitalbank_rate%` ("2% a week"), `%c
 - [ ] With CapitalMarket installed, the rates follow the autopilot without restarting.
 - [ ] A player can't go below zero through any bank path, and a loan can never trap them. At worst, borrowing pauses.
 - [ ] Upkeep freezes and unfreezes correctly on GriefPrevention, Lands and WorldGuard, and never deletes anything.
-- [ ] The bank check passes after a simulated month (see `sim`).
+- [x] The bank check passes after a simulated month (see `sim`).
 
 ## 12. Open questions
 1. **Should early repayment refund unused interest?** *No, for simplicity.* It could be reconsidered for the Realistic preset.
