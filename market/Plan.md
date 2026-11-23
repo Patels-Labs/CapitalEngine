@@ -14,8 +14,8 @@
 - A fresh server starts with `target-stock-default` of every server item (otherwise an empty stock prices at 4x base).
 - `orders` and `jobs` have no `escrow_left`: escrow is `Σ remaining × price` of open orders/jobs. `policy_state` has plain columns instead of JSON. `price_daily` is not kept; weekly figures come from `trades`, which is pruned after 8 weeks.
 - The same-IP trade filter is not implemented (outliers are cut at 3x the median).
-- "The town needs" jobs follow §5.8 literally: delivered items are used up and don't change server stock.
-- **Budget pooling:** while no server job is open, the jobs share of the daily budget (60%) is added to the buyer's, so a fresh server can buy more than one expensive item a day. The total new-money allowance is unchanged. Without this a solo player's 60-coin buyer budget could not cover a single 42-coin diamond sale after any other sale.
+- "The town needs" jobs are posted when server stock is above the target (not 2×), and each delivered item also uses up one of the server's own extra items (§5.8).
+- **Budget pooling:** while no server job is open, the jobs share of the daily budget (60%) is added to the buyer's, so a fresh server can buy more than one expensive item a day. The total new-money allowance is unchanged. Without this a solo player's 60-coin buyer budget could not cover a single 42-coin diamond sale after any other sale. Since "the town needs" jobs open as soon as stock is above the target, pooling applies on fewer days than it used to.
 - **Stalls** place a barrel on top of the block the administrator is looking at, with a text-display hologram above it. They need three clear blocks and never replace the original block. Players cannot break the barrel; `/market admin stall remove` does.
 - **Menus** use named buttons with lore for figures, a blank-pane grid, centred layouts, a Sell side (green) and a Buy side (orange) on item pages, Browse with Buy/Sell/stock/trend lore, and an item search (typing a name the market doesn't stock opens that item's player-listings page).
 - **Player documentation:** [docs/player-guide.md](docs/player-guide.md) is the full guide (server owners can publish it on their own wiki), and `/market help [topic]` plus a Help button in the main menu give the short version in chat, with clickable topics and a typed fallback for Bedrock. Both are written from the behaviour in this plan; update them together.
@@ -98,6 +98,7 @@ The pure-Java parts can be unit tested directly and driven by the simulator.
 - **Each item has `qty` and `locked`:** listed items are `locked` until they sell or the listing is cancelled.
 - **Depositing** from the inventory works anywhere.
 - **Withdrawing** to the inventory happens at a **stall**. Owners can turn on `stash.withdraw-anywhere` for kid servers.
+- **Moves between the inventory and the Stash are written first.** A deposit adds the items as `locked` before they leave the inventory; a withdrawal locks them before they are given. Each hold is then settled to what really moved (a full inventory keeps the rest in the Stash). On start, `locked` is reset to what open listings need, so a hold that a crash interrupted leaves its items in the Stash instead of losing them.
 
 ### 5.3 Order book and matching
 - **One `OrderBook` per item,** held in memory and backed by `orders`. Buy orders (bids) are sorted highest price first, then oldest first. Sell orders (asks) are sorted lowest price first, then oldest first.
@@ -213,7 +214,9 @@ On a brand-new server with no history, config defaults are used for the first 2 
      spawn-railway: { name: "Spawn Railway", needs: { iron_ingot: 5000, rail: 2000 }, pay-premium: 0.15, deliver-to: chest@world,10,64,-20 }
      ```
      Items go to the **project chest** (if set) so the owner can actually build with them. Otherwise they're destroyed.
-  2. **Then oversupply.** Items whose server stock is more than 2× the target, or whose price fell more than 10% this week, get "The town needs X" jobs. Delivered items are destroyed: they're used up, which is a sink.
+     A paid delivery stays `CHEST` in `job_deliveries` until its items are in the chest (anything that doesn't fit goes back to the deliverer's Stash); on start, `CHEST` deliveries are sent again, so a crash never loses them. A crash right after the items land can put them in twice: extra items in the owner's chest are the safer mistake.
+  2. **Then oversupply.** Items whose server stock is above the target, or whose price fell more than 10% this week, get "The town needs X" jobs for the extra (at least 64, at most `per-item-daily-buy`). Delivered items are destroyed: they're used up, which is a sink. **Each delivered item also uses up one of the server's own items above the target**, in the same database transaction as the delivery, so the server's stock (and with it the price) comes back to normal. Stock is not money, so this needs no ledger entry, just like the daily use-up.
+     - *Why:* a job that only destroyed players' items left the server's own surplus in place, so a 20x farm flood took about four months to clear at the 2% daily use-up. Raising `maker.stock-use-rate` instead drains every item every day and made money growth and price swings worse (sim/RESULTS.md). Posting jobs only above twice the target made the price saw between the two and still left one seed's flood unrecovered after four weeks, so jobs start as soon as the stock is above the target.
   - **Pay per unit** is `ref × (1 + premium)` (default premium 10%). It's more than the server's bid, so players prefer jobs.
   - **Payment** is via `serverPay(deliverer, …, "market.server_job")`, counted against the `"jobs"` budget. When today's budget runs out, server jobs show **"Paused until tomorrow"**.
 

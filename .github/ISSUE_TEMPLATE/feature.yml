@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest something new or a change
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Plugin
+      options: [CapitalEngine (core), CapitalMarket, CapitalBank, CapitalDashboard, CapitalTrade, API, A new add-on]
+    validations: { required: true }
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve for players or owners?
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to happen?

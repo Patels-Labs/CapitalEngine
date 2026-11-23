@@ -133,15 +133,43 @@ class StoreDialectTest {
         assertEquals("ACCEPTED", st.job(build).status());
         long del = st.insertDelivery(job, mia, 4, 200, 1, false);
         st.deposit(mia, "iron", 10);
-        st.finishDelivery(del, job, mia, 4);
+        st.finishDelivery(del, job, mia, 4, 0, false);
         assertEquals(4, st.job(job).done());
-        assertTrue(st.pendingDeliveries().isEmpty());
+        assertTrue(st.deliveries("PENDING").isEmpty());
         assertEquals(6 * 50 + 700, st.jobsEscrow());
         assertEquals(0, st.serverJobPaidToday(1), "player jobs don't count against the server budget");
-        st.insertJob(null, "iron", 5, 60, "railway", 1, 0, "OPEN");
+        long rail = st.insertJob(null, "iron", 5, 60, "railway", 1, 0, "OPEN");
         assertTrue(st.projectJobExists("railway", "iron"));
         assertTrue(st.serverJobOpen("iron") == false, "a project job isn't a 'town needs' job");
         assertTrue(st.anyServerJobOpen());
+        long toChest = st.insertDelivery(rail, mia, 2, 120, 1, true);
+        st.finishDelivery(toChest, rail, mia, 2, 0, true);
+        assertEquals(List.of(toChest), st.deliveries("CHEST").stream().map(d -> d.id()).toList(), "paid, not yet in the chest");
+        st.deliveryStatus(toChest, "DONE");
+        assertTrue(st.deliveries("CHEST").isEmpty());
+        assertEquals(120, st.serverJobPaidToday(1));
+
+        // "the town needs" deliveries use up the server's surplus, never below the target
+        st.setStock("wheat", 100);
+        long town = st.insertJob(null, "wheat", 50, 10, null, 1, 9, "OPEN");
+        st.deposit(mia, "wheat", 50);
+        st.finishDelivery(st.insertDelivery(town, mia, 30, 300, 1, true), town, mia, 30, 80, false);
+        assertEquals(80, st.stock("wheat"), "only 20 were above the target");
+        st.finishDelivery(st.insertDelivery(town, mia, 20, 200, 1, true), town, mia, 20, 80, false);
+        assertEquals(80, st.stock("wheat"));
+        assertEquals("DONE", st.job(town).status());
+
+        // a Stash hold: counted but not spendable, settled to what really moved, and freed at recovery if never settled
+        st.hold(sam, "gold", 8);
+        assertEquals(0, st.stashFree(sam, "gold"), "held items can't be spent yet");
+        st.settleHold(sam, "gold", 8, 3);
+        assertArrayEquals(new int[]{5, 0}, st.stash(sam).get("gold"), "3 of the 8 never left the inventory");
+        st.hold(sam, "gold", 4);
+        long listed = st.insertOrder("gold", "SELL", sam, 100, 2, 5, 99, "OPEN");
+        st.lock(sam, "gold", 2);
+        st.releaseHolds();
+        assertArrayEquals(new int[]{9, 2}, st.stash(sam).get("gold"), "a crash keeps the held items; the listing stays locked");
+        st.orderStatus(listed, "CANCELLED");
 
         // stalls, tutorial, flood stats (the "ignore" and plain upserts)
         var stall = new Store.Stall("world", 1, 2, 3);

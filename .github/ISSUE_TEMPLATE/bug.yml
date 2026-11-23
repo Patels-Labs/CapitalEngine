@@ -1,0 +1,36 @@
+name: Bug report
+description: Something doesn't work as described
+labels: [bug]
+body:
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Plugin
+      options: [CapitalEngine (core), CapitalMarket, CapitalBank, CapitalDashboard, CapitalTrade, API, Not sure]
+    validations: { required: true }
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Plugin version(s), Paper version, Java version, and Geyser/Floodgate if a Bedrock player is involved
+      placeholder: CapitalEngine 1.0.1, CapitalMarket 1.2.1, Paper 1.21.11 build 120, Java 21
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. /market\n2. Click Quick Sell\n3. ..."
+    validations: { required: true }
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console errors or `/ce check` output
+      render: text
+  - type: markdown
+    attributes:
+      value: "**Found a way to duplicate coins or items, or to create money?** Please don't post it here. See SECURITY.md."

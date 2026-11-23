@@ -1,2 +1,2 @@
 rootProject.name = "CapitalEngine"
-include("api", "core", "market", "dashboard", "sim")   // bank, dashboard, trade are added in their phases
+include("api", "core", "market", "bank", "dashboard", "sim")   // trade is added in its phase

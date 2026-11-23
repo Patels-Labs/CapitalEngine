@@ -117,7 +117,7 @@ Bundled scenarios:
 | `tiny-2` | The market maker carries the market. Money growth is driven by the per-player floor and stays small. |
 | `small-20` | A healthy mix. Inflation converges to target. |
 | `big-200` | Player trade share > 60%, the server's gap widens to ≥ 0.4, and most savings interest is Treasury-funded. |
-| `farm-flood` | The wheat price falls, server jobs and stock use-up absorb the surplus, and the index recovers within 4 weeks of the flood ending. |
+| `farm-flood` | "The town needs" jobs use up the surplus from server stock (it stays under 4x the target), and the wheat price is back within 10% (weekly average) 4 weeks after the flood ends. |
 | `everyone-quits` | Active money supply drops, daily new money falls toward floor × active players, and nothing explodes. |
 | `no-bank` | Market's autopilot reallocates the savings share, and money growth stays within band. |
 | `with-trade` | Exports put a floor under Market prices, imports are a net money sink, and quotas cap the money printed. |
@@ -171,7 +171,7 @@ Output goes to `sim/build/sim-out/<scenario>/<timestamp>/`: `daily.csv`, `summar
 Scenario YAML only (§5.4). There's no global sim config.
 
 ## 8. Commands
-- `./gradlew :sim:test` runs `tiny-2`, `small-20` (60 days) and `farm-flood` (60 days). It's a CI gate.
+- `./gradlew :sim:test` runs `tiny-2`, `small-20` (60 days) and `farm-flood` (70 days). It's a CI gate.
 - `./gradlew :sim:run --args="<scenario.yml> [--days N] [--seed S] [--sweep key=v1,v2] [--keep]"` does long runs and sweeps.
 
 ## 9. Threading and failure handling

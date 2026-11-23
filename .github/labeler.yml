@@ -1,0 +1,8 @@
+"module: api":       [{ changed-files: [{ any-glob-to-any-file: "api/**" }] }]
+"module: core":      [{ changed-files: [{ any-glob-to-any-file: "core/**" }] }]
+"module: market":    [{ changed-files: [{ any-glob-to-any-file: "market/**" }] }]
+"module: bank":      [{ changed-files: [{ any-glob-to-any-file: "bank/**" }] }]
+"module: dashboard": [{ changed-files: [{ any-glob-to-any-file: "dashboard/**" }] }]
+"module: trade":     [{ changed-files: [{ any-glob-to-any-file: "trade/**" }] }]
+"module: sim":       [{ changed-files: [{ any-glob-to-any-file: "sim/**" }] }]
+documentation:       [{ changed-files: [{ any-glob-to-any-file: ["**/*.md", "**/docs/**"] }] }]
