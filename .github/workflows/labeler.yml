@@ -1,0 +1,13 @@
+# Labels pull requests by the module folders they change. pull_request_target so it can label PRs from forks;
+# it never checks out or runs the PR's code, which is what makes that safe.
+name: Label
+on: pull_request_target
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/labeler@v5

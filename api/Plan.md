@@ -251,7 +251,7 @@ The API has no logic of its own. Its contract is tested in **core** with `ApiCon
   - Minor versions only *add* things (methods with default implementations, new enum values at the end, new events).
   - Major versions may break things.
 - `apiVersion()` returns the running version. `isCompatible(min)` compares by semantic version.
-- **Published** as a binary jar plus Javadoc (**no sources jar**, because the project is closed source) as `com.patelheet:capitalengine-api:<version>`, to the public Maven repo at `https://patelheet30.github.io/capitalengine-api/m2` (GitHub Pages on `patelheet30/capitalengine-api`). Every public member gets a Javadoc comment.
+- **Published** as a binary jar plus Javadoc with a sources jar as `com.patelheet:capitalengine-api:<version>`, to the public Maven repo at `https://patelheet30.github.io/capitalengine-api/m2` (GitHub Pages on `patelheet30/capitalengine-api`). Every public member gets a Javadoc comment.
 
 **Done when:**
 - every interface and record above exists with Javadoc
@@ -261,7 +261,7 @@ The API has no logic of its own. Its contract is tested in **core** with `ApiCon
 
 ## 12. Open questions
 1. ~~Group and package ID~~ **Decided:** group `com.patelheet`, packages `com.patelheet.capitalengine.<module>`.
-2. ~~Licence~~ **Decided:** closed source, All Rights Reserved. Third parties get the right to compile against the API through [API-LICENSE.txt](API-LICENSE.txt). The build copies it into the jar as `META-INF/API-LICENSE.txt` and into the Javadoc bundle.
+2. ~~Licence~~ **Decided:** GPL-3.0-only with the [CapitalEngine Add-on Exception](../ADDON-EXCEPTION.txt), so add-ons built on the API may use any licence. [API-LICENSE.txt](API-LICENSE.txt) (version 2.0) summarises this. The build copies it into the jar as `META-INF/API-LICENSE.txt` and into the Javadoc bundle.
 3. **Planned for 1.x:**
    - **Shared accounts** (members, roles, permissions) for CapitalBusiness and VaultUnlocked's shared-account methods.
    - **Multiple currencies,** a `Currency` parameter overload, for CapitalNations.
