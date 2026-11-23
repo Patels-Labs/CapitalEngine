@@ -447,7 +447,7 @@ If a sub-plan and this overview disagree, the sub-plan wins. Fix this overview w
 2. **Should the server sell items it doesn't have ("always in stock")?** *No by default;* owners can enable it per item.
 3. ~~Where is the API jar published?~~ **Decided:** the public Maven repo at `https://patelheet30.github.io/capitalengine-api/m2` (GitHub Pages on `patelheet30/capitalengine-api`), binary and Javadoc only.
 4. **Currency name and symbol.** Default "coins"; owners can configure it.
-5. ~~Licence~~ **Decided: closed source, All Rights Reserved.** The API jar ships with [api/API-LICENSE.txt](api/API-LICENSE.txt), which lets third parties compile against it.
+5. ~~Licence~~ **Decided: GPL-3.0-only with the [CapitalEngine Add-on Exception](ADDON-EXCEPTION.txt).** Add-ons built only on the API may use any licence, including closed source. (Before going open source, the project was closed source and the API jar shipped under API licence 1.0.)
 
 ---
 
