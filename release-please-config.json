@@ -23,6 +23,9 @@
   "packages": {
     "api": { "component": "api" },
     "core": { "component": "core" },
-    "market": { "component": "market" }
+    "market": { "component": "market" },
+    "bank": { "component": "bank", "initial-version": "1.0.0" },
+    "dashboard": { "component": "dashboard", "initial-version": "1.0.0" },
+    "trade": { "component": "trade", "initial-version": "1.0.0" }
   }
 }
