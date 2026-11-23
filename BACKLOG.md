@@ -10,10 +10,11 @@ Things we know about and have decided not to do yet. Newest first within each gr
 - **Same-IP trade filter** for the weekly price index (market/Plan.md §5.7). Needs a way to read a player's address without a new dependency.
 
 ## Decisions the simulator asked for (see sim/RESULTS.md)
-- **Budgets don't bind in a market-only economy.** Money creation is limited by what players sell, not by `floor-per-active-player` above about 150. Revisit once Bank and Trade add sinks and lenders.
-- **Money grows about 14x in 90 days on a 20-player server** with the current defaults, against the plan's 15% a month. The floor (150 coins a day per active player) is the lever; 50 gives 6.3x and steadier prices.
+- **Should CapitalMarket answer `budget("exports")`?** (trade/Plan.md §12, question 1.) Exports are the biggest source of new money once Trade is installed, and `exports.daily-budget` is a flat number: 1000 (the new default) pays about 90 coins a day per active player on 20 players but about 11 on 200. Folding exports into the autopilot's daily total would scale with the server and let "prices rising, create less" reach exports. It's a few lines in `MarketPolicyService`; re-run the §2 sweeps when it's built.
+- **Should the autopilot set less aside for savings when savers hold little?** With CapitalBank installed, a third of the daily budget is reserved for savings interest (Appendix A), but interest runs at about 5 coins a day on 20 players, so the server buyer and jobs get about 30% less (1,366 against 1,960 coins a day on `small-20`). The unpaid share is never created, which restrains growth, but it also leaves players with fewer coins and more unmet needs. Capping the savings share at what the bank owed yesterday (it publishes `interest_paid_today` and could publish what was owed) would fix it.
+- **The plan's 15% a month band can't be met on a new server.** The server buys and almost never sells (players undercut its price), so the floor is new money every day, and monthly growth is about `30 × floor × active players ÷ supply`. It reaches 15% only at about `200 × floor` coins per active player. Either the band applies only after supply reaches that level, or the floor should shrink as supply grows. The floor is now 100 (was 150): it steadies prices on Market alone, and costs 1 to 2 points of unmet needs with Bank.
+- **Land upkeep is recycled, not a sink.** It goes to the Treasury, which the autopilot's budgets spend again. If owners want it to remove money, part of it could be destroyed (a new `upkeep.destroy-share`); not done, because nothing in the sim needs it yet.
 
 ## Simulator
-- Bank roles (Saver, Borrower) and Trade exports/imports, when those phases ship.
-- `big-200` has not been run in CI (it takes longer); run it with `./gradlew :sim:run --args="big-200.yml"`.
-- Tune and record the defaults for Bank and Trade in `sim/RESULTS.md`.
+- `big-200` (about 80 seconds) is not in CI; run it with `./gradlew :sim:run --args="big-200.yml"`. Bank and Trade aren't in `big-200`, `tiny-2` or `everyone-quits` yet.
+- Bank's "coins arriving" collection, frozen land, dormant loans, Ports and Cargo, Port News and booms aren't checked by the sim (sim/RESULTS.md, "Not simulated yet").
