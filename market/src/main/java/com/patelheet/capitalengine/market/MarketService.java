@@ -101,7 +101,7 @@ public final class MarketService implements AutoCloseable {
         news = cfg.getBoolean("news.enabled", true);
         double monthly = cfg.getDouble("autopilot.target-monthly-inflation", 0.02);
         ap = new Autopilot.Cfg(monthly * 7 / 30, cfg.getDouble("autopilot.target-growth-monthly", 0.03) / 30,
-                api.currency().parse(cfg.getString("autopilot.floor-per-active-player", "150")),
+                api.currency().parse(cfg.getString("autopilot.floor-per-active-player", "100")),
                 cfg.getDouble("autopilot.rate.start-weekly", 0.02), cfg.getDouble("autopilot.rate.min-weekly", 0),
                 cfg.getDouble("autopilot.rate.max-weekly", 0.08), cfg.getDouble("autopilot.split-jobs-vs-buyer", 0.6),
                 cfg.getInt("autopilot.warmup-weeks", 2));
