@@ -3,6 +3,28 @@
 > **Artifact:** `CapitalBank.jar` (optional add-on) · **Depends on:** CapitalEngine ([../core/Plan.md](../core/Plan.md)) via [../api/Plan.md](../api/Plan.md)
 > **Parent plan:** [../Plan.md](../Plan.md) · **Works with or without** [CapitalMarket](../market/Plan.md)
 
+## 0. Build status (what exists, and where the code differs from this plan)
+**Built and tested (`./gradlew :bank:test`):** savings (deposit, withdraw, daily interest with cap, budget scaling and the core policy-limit stop), one loan per player (credit limit and growth, playtime gate, loan-book cap, payout, daily collection, arrears and OVERDUE, early repayment, write-off and cooldown, dormant loans), land upkeep (daily charge, automatic collection when coins arrive, warning, freeze and unfreeze, vacation rule) with GriefPrevention, Lands and WorldGuard sources, the `IndicatorProvider`, the bank check, crash recovery of every in-flight row, chest menus, `/bank` commands, Floodgate forms, PlaceholderAPI, `/bank help` and [docs/player-guide.md](docs/player-guide.md). The tests use the real CapitalEngine and no CapitalMarket; a fake `MonetaryPolicy` and a fake `ClaimSource` stand in for them.
+
+**Deliberate differences from the sections below:**
+- **Fewer classes (§4).** Every formula (rates, interest, loan maths, credit limit, upkeep) is in one pure class, `math/BankMath`, with no `org.bukkit` import. `Savings`, `InterestRun`, `Loans`, `Upkeep` and `Rates` are sections of `BankService`. The freeze listener and the indicator provider live in `CapitalBankPlugin`; the four menus are one `Menus` class. `ClaimSource` and its three implementations are in `upkeep/`, and the database is `storage/Store`.
+- **One worker thread instead of "100 players per tick" (§9).** As in Market, every service call runs on one worker, which may wait on API futures; the main thread never waits. Interest is sent 100 transactions at a time, so a policy limit stops the run within one batch. A day that is interrupted resumes on the next start from a durable `day_runs` marker (written, with its catch-up flag, before any money moves); a resumed catch-up day still pays nothing.
+- **`ClaimSource` (§4, §5.4)** has `areas()` (every owner's area at once, read on the main thread at each Day event), `ownerAt(location)` and `trusted(location, player)`. The freeze blocks building, breaking and opening containers for the owner and for players the claim plugin trusts there (GriefPrevention container trust or better, Lands trusted players, WorldGuard members and owners); visitors are never affected. Lands area is `getChunksAmount() × 256`. WorldGuard counts nested regions separately.
+- **Façade (§5.6).** Deposits, withdrawals and repayments return `Result(amount, error)` (error is a messages.yml key) rather than `TxResult`. `offer` and `borrow` take the player's playtime in minutes, read on the main thread. `upkeep` takes the player's current area. `deposit`/`withdraw`/`repay` with amount ≤ 0 mean "all".
+- **Playtime and dormancy aren't in the API.** Playtime comes from the vanilla `PLAY_ONE_MINUTE` statistic. "Dormant" (60 days, core's default) and the upkeep vacation rule (14 days) use the bank's own last-seen day, recorded on join, quit and at each Day event. Both are marked `// ponytail:` for when the API exposes core's activity tracking.
+- **Overdue loans count days, not a date (§5.3).** `overdue_days` grows by one on each collection day the loan is still behind and resets when it catches up; a loan is written off when it passes `write-off-days`. Because dormant loans are skipped, their write-off clock stops by itself.
+- **Coins arriving (§5.4)** also pay loan arrears, not only upkeep. Transactions made by CapitalBank itself (loan payouts, savings withdrawals) don't trigger it. Within the one-minute debounce, a single follow-up run is scheduled for when the minute is up.
+- **Upkeep collection** is a `move(player → Treasury)` with reference `upk:<uuid>:<seq>` (the `collect` shortcut has no reference). Its amount is saved as `pending` first, so recovery can finish it.
+- **Data (§6):** see the schema in §6, which is updated. In short: `loans` has `overdue_days`, `missed` and `last_day` (the last collection day); `loan_payments` has its own id, a `kind` (`DAY` or `PAY`), the day's `due`, a `status` and a unique `reference`; the credit column is `credit_limit` (`limit` is an SQL keyword); `upkeep` has `seq` and `pending`; `players` holds last-seen days and who uses savings, so the interest run knows whose accounts to read; `bank_daily` is `day_runs` and keeps only what can't be read from `loans`.
+- **The bank check (§6)** also checks that the interest the bank recorded for the last day equals what the ledger paid. The bank holds no escrow and stores no savings balances, so there is nothing else to reconcile for savings.
+- **Write-off warning:** more than 10% of loans written off in a week raises a `WARN` on the Week event.
+- **`/bank admin unfreeze`** sets `due` to 0 and logs it to the console; no transaction is made, because the Treasury never received those coins.
+- **PlaceholderAPI** also answers `%capitalbank_loan%` (the root plan's name) with the same value as `%capitalbank_loan_left%`.
+- **Dependencies:** GriefPrevention 18.0.0 and LandsAPI 7.25.4 come from JitPack, WorldGuard 7.0.17 from EngineHub; the repositories are declared in `bank/build.gradle.kts` and limited to those groups. WorldGuard 7.0.18 and later need Java 25, so 7.0.17 is the newest that compiles with `release = 21`. All three are `compileOnly` and `softdepend`.
+- **Config:** `rates.max-*` also caps the config rates, not only the policy's.
+
+**Not tested yet:** a real server (1.21.11, 26.1.x, 26.2), a Bedrock player through Geyser, the three real claim plugins (their sources are compiled against the real APIs but only exercised through a fake), MySQL/MariaDB and PostgreSQL (the schema exists for both; tests run on SQLite), and a month-long `sim` scenario (the integration test runs a 30-day month instead; `sim` has no bank scenario yet).
+
 ## 1. Purpose and scope
 CapitalBank is the server's simple, kid-safe bank. It covers:
 1. **Savings:** coins in the bank earn a little interest every day, and are safe from other plugins.
@@ -26,24 +48,18 @@ CapitalBank is the server's simple, kid-safe bank. It covers:
 ## 4. Package layout and key classes
 ```
 com.patelheet.capitalengine.bank
-├─ CapitalBankPlugin
-├─ BankService                public façade for GUIs, commands, simulator (§5.6)
-├─ savings/
-│  ├─ Savings                 deposit / withdraw (transfers to/from the player's savings account)
-│  └─ InterestRun             daily interest with budget scaling             (pure Java core)
-├─ loans/
-│  ├─ Loans                   apply / disburse / collect / overdue / write-off
-│  ├─ LoanMath                instalments, principal/interest split          (pure Java)
-│  └─ CreditLimit             start limit, growth, pauses                    (pure Java)
+├─ CapitalBankPlugin          wiring, events, the freeze listener, IndicatorProvider "capitalbank"
+├─ BankService                public façade for GUIs, commands, simulator (§5.6): savings, interest run, loans, upkeep, day run, recovery, check
+├─ Actions / Menus / Menu     what a player can do; chest menus (Bank, Savings, Loan, Land Upkeep, Yes/No)
+├─ BankCommand                /bank and /bank admin
+├─ BankForms                  the only class touching Floodgate
+├─ BankExpansion              PlaceholderAPI
+├─ Messages / FileUpdater     messages.yml; config and messages kept current on upgrade
+├─ math/BankMath              rates, interest and scaling, loan terms and split, credit limit, upkeep formula   (pure Java)
 ├─ upkeep/
-│  ├─ Upkeep                  daily charge, due balance, warnings, freeze
-│  ├─ ClaimSource             interface: ownedArea(uuid), ownerAt(location)
-│  ├─ GriefPreventionSource / LandsSource / WorldGuardSource   (one per installed plugin)
-│  └─ FreezeListener          blocks building in a frozen owner's claims
-├─ rates/Rates                MonetaryPolicy if present, else config
-├─ BankIndicators             IndicatorProvider "capitalbank"
-├─ gui/                       BankMenu, SavingsMenu, LoanMenu, UpkeepMenu
-└─ storage/                   own DB, migrations, repos
+│  ├─ ClaimSource             interface: areas(), ownerAt(location), trusted(location, player)
+│  └─ GriefPreventionSource / LandsSource / WorldGuardSource   (one per installed plugin)
+└─ storage/Store              own DB, migrations (bank-db/<dialect>/V<n>__*.sql)
 ```
 `ClaimSource` has one implementation per claim plugin, which is why it's an interface. Each one is only loaded when its plugin is present.
 
@@ -85,14 +101,14 @@ com.patelheet.capitalengine.bank
 - **Terms:**
   - The player picks an amount up to their limit.
   - The term is `loans.term-days` (7). Interest is **flat**: `interest = principal × loanPerDay × termDays`.
-  - The instalment is `(principal + interest) / termDays`.
+  - The instalment is `ceil((principal + interest) / termDays)`; the last day takes only what is left, so no coin is lost to rounding.
   - The confirmation screen says exactly that: "Borrow 500 coins, pay back 75 coins a day for 7 days (525 total). ✔ / ✖".
 - **Payout:** `transaction("bank.loan_payout").issue(player, principal).reference("loan:<id>:payout")`. **The loan creates the money,** just like real bank lending.
 - **Bank-wide cap:** before paying out, the bank checks that Σ outstanding principal + the new principal ≤ `loans.loan-book-max`. If not: "The bank has lent out all it can today, try tomorrow!"
 - **Daily collection** (at each Day event that isn't a catch-up), for each active loan:
   ```
   take      = min(instalment + arrears, player wallet)                  # never more than they have
-  principal = take × principal/(principal+interest)   ;   interestPart = take − principal
+  principal = floor(take × principalLeft/(principalLeft+interestLeft))   ;   interestPart = take − principal   # by what is still owed, so the last payment clears both exactly
   tx: destroy(player, principal) + move(player → Treasury, interestPart) , reference "loan:<id>:day:<day>"
   ```
   - The principal part is **destroyed**, so the money the loan created goes away again. The interest goes to the Treasury.
@@ -141,27 +157,35 @@ Cached and refreshed at each Day event:
 
 ### 5.6 `BankService` (public façade)
 ```java
-CompletableFuture<TxResult> deposit(UUID p, long amount);   CompletableFuture<TxResult> withdraw(UUID p, long amount);
+CompletableFuture<Result> deposit(UUID p, long amount);      CompletableFuture<Result> withdraw(UUID p, long amount);   // amount ≤ 0: all
 long savings(UUID p);
-LoanOffer offer(UUID p);                                     // limit, rate, instalment preview, or reason not allowed
-CompletableFuture<LoanResult> borrow(UUID p, long amount);   CompletableFuture<TxResult> repay(UUID p, long amount);
-Optional<LoanView> loan(UUID p);
-UpkeepView upkeep(UUID p);
+CompletableFuture<LoanOffer> offer(UUID p, long playedMinutes);              // limit, weekly rate, term, or the reason it's not allowed
+BankMath.Terms preview(long amount);                                         // interest, instalment, total at today's rate
+CompletableFuture<LoanResult> borrow(UUID p, long amount, long playedMinutes);
+CompletableFuture<Result> repay(UUID p, long amount);                        // amount ≤ 0: everything left the wallet can cover
+CompletableFuture<Optional<Loan>> loan(UUID p);
+CompletableFuture<UpkeepView> upkeep(UUID p, long area);
+CompletableFuture<Void> onDay(long day, boolean catchUp, Snapshot s);         // also driven directly by tests and the simulator
+CompletableFuture<List<String>> check();
 ```
+`Result(amount, error)` carries a messages.yml key as the error. Playtime and the player's area are read on the main thread by the caller.
 GUIs, commands and the simulator all use this façade.
 
 ## 6. Data (own database, `plugins/CapitalBank/bank.db` by default)
 ```
-loans        (id PK, uuid, principal, interest, instalment, term_days, start_day, paid_principal, paid_interest,
-              arrears, status ACTIVE|OVERDUE|PAID|WRITTEN_OFF, overdue_since NULL, closed_day NULL)
-loan_payments(loan_id, day_index, principal, interest, reference, PK(loan_id, day_index))
-credit       (uuid PK, limit, clean_repayments, paused_until_day NULL)
-upkeep       (uuid PK, area, due, last_charged_day, frozen BOOL, last_warned_day)
-bank_daily   (day_index PK, interest_owed, interest_paid, scale, upkeep_collected, loans_issued, loans_repaid, written_off)
+loans        (id PK, uuid, principal, interest, instalment, term_days, start_day, paid_principal, paid_interest, arrears,
+              status PENDING|ACTIVE|OVERDUE|PAID|WRITTEN_OFF|FAILED, overdue_days, missed, last_day, closed_day NULL)
+loan_payments(id PK, loan_id, day_index, kind DAY|PAY, due, principal, interest, reference UNIQUE, status PENDING|DONE)
+credit       (uuid PK, credit_limit, clean_repayments, paused_until_day NULL)
+upkeep       (uuid PK, area, due, last_charged_day, frozen, last_warned_day, seq, pending)
+players      (uuid PK, last_seen_day, saver)
+day_runs     (day_index PK, catch_up, done, interest_owed, interest_paid, scale, upkeep_collected)
 ```
 Savings balances are **not** stored here. They live in core as accounts.
 
-**Check** (at each Day event and on `/bank admin check`): for each active loan, the payout and every collection reference must exist in core (`findByReference`), and `paid_principal` must equal the sum of the destroyed legs in those records. A mismatch raises a `CRITICAL` alert.
+References: payout `loan:<id>:payout`, daily collection `loan:<id>:day:<day>`, early repayment and coins-arrived payments `loan:<id>:pay:<n>`, interest `int:<day>:<uuid>`, upkeep `upk:<uuid>:<seq>`. Each PENDING row (loan, payment, upkeep `pending`) is written with its exact amounts before its transaction is sent; on startup a row whose reference is in the ledger is finished, and one whose reference isn't is dropped.
+
+**Check** (at each Day event and on `/bank admin check`): for each active loan, the payout and every collection reference must exist in core (`findByReference`), and `paid_principal` must equal the sum of the destroyed legs in those records. The interest recorded for the last day run must equal what the ledger paid under its `int:` references. A mismatch raises a `CRITICAL` alert.
 
 ## 7. Config (abridged)
 ```yaml
@@ -189,7 +213,7 @@ upkeep: { enabled: true, free-blocks: 10000, per-100-blocks: 1, freeze-after-day
 PlaceholderAPI: `%capitalbank_savings%`, `%capitalbank_rate%` ("2% a week"), `%capitalbank_loan_left%`, `%capitalbank_upkeep_due%`.
 
 ## 9. Threading and failure handling
-- **Day-event runs** (interest, collection, upkeep) process players in batches of 100 per tick, so a large server doesn't stall. Each player's transaction has a reference, so **a run that's interrupted resumes safely** on the next start: it re-runs the day, and duplicates are skipped.
+- **Day-event runs** (collection, upkeep, interest) run on the bank's worker thread, so the main thread never stalls; only the claim areas and the online list are read on the main thread first. Each player's transaction has a reference, and `day_runs` records that a day has started before any money moves, so **a run that's interrupted resumes safely** on the next start: it re-runs the day, and duplicates are skipped.
 - **`ECONOMY_PAUSED`** stops the run, which retries in 5 minutes. Players see "The bank is having a nap, try again in a minute!"
 - **Freezing** uses fast in-memory lookups: a set of frozen owners, plus `ClaimSource.ownerAt` lookups that the claim plugins already cache.
 - **If a claim plugin is removed,** its source simply stops reporting area. Frozen state from it is cleared on the next Day event.
