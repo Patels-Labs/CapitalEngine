@@ -251,7 +251,7 @@ The API has no logic of its own. Its contract is tested in **core** with `ApiCon
   - Minor versions only *add* things (methods with default implementations, new enum values at the end, new events).
   - Major versions may break things.
 - `apiVersion()` returns the running version. `isCompatible(min)` compares by semantic version.
-- **Published** as a binary jar plus Javadoc with a sources jar as `com.patelheet:capitalengine-api:<version>`, to the public Maven repo at `https://patelheet30.github.io/capitalengine-api/m2` (GitHub Pages on `patelheet30/capitalengine-api`). Every public member gets a Javadoc comment.
+- **Published** as a binary jar plus Javadoc plus Javadoc (a sources jar follows once publishing moves out of the binaries-only repo) as `com.patelheet:capitalengine-api:<version>`, to the public Maven repo at `https://patelheet30.github.io/capitalengine-api/m2` (GitHub Pages on `patelheet30/capitalengine-api`). Every public member gets a Javadoc comment.
 
 **Done when:**
 - every interface and record above exists with Javadoc

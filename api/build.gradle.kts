@@ -4,7 +4,7 @@ base.archivesName = "capitalengine-api"
 
 dependencies { compileOnly(libs.paper.api) }
 
-java { withJavadocJar(); withSourcesJar() }
+java { withJavadocJar() }   // ponytail: add withSourcesJar() once API publishing moves out of the binaries-only capitalengine-api repo
 
 tasks.processResources {   // the running API reports the version it was built as (ApiImpl reads this file)
     val v = project.version
@@ -18,7 +18,6 @@ tasks.javadoc {
     doLast { copy { from("API-LICENSE.txt", rootProject.file("LICENSE"), rootProject.file("ADDON-EXCEPTION.txt")); into(destinationDir!!) } }
 }
 tasks.named<Jar>("javadocJar") { from("API-LICENSE.txt") { into("META-INF") } }
-tasks.named<Jar>("sourcesJar") { from("API-LICENSE.txt") { into("META-INF") } }
 
 publishing {
     publications { create<MavenPublication>("api") { artifactId = "capitalengine-api"; from(components["java"]) } }

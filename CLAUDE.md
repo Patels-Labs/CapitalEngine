@@ -150,7 +150,7 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 ./gradlew :sim:run --args="small-20.yml --days 120"   # long simulation; add --sweep key=v1,v2 for tuning sweeps
 ```
 - Each plugin module builds its jar into `<module>/build/libs/`.
-- `api` also publishes `com.patelheet:capitalengine-api` as a binary jar with sources and Javadoc.
+- `api` also publishes `com.patelheet:capitalengine-api` as a binary jar plus Javadoc (a sources jar follows once publishing moves out of the binaries-only repo).
 
 ## Testing expectations
 - **Money logic** (anything that moves coins, splits amounts or rounds) gets a unit test that fails if the logic breaks.
@@ -182,7 +182,7 @@ Repo root: `settings.gradle.kts` and `build.gradle.kts` (shared conventions), pl
 - **Keep the API boundary clean.** Anything an add-on needs must be in the `api` package, because add-ons may only use what is there. Never move implementation into `api`.
 - **Contributions come in under the same terms** (see [CONTRIBUTING.md](CONTRIBUTING.md)). Don't paste code from projects with incompatible licences.
 - **Third-party libraries** keep their own licences. Don't bundle (shade) one without checking it is GPL-3.0-compatible and recording it.
-- **The name, logo and official icons are not covered by the GPL.** They follow the brand policy in `branding/` once it exists.
+- **Brand assets (name, logo, icons): policy pending.** The proposal is in `branding/README.md` (brand kit PR); until it is decided, treat official icons as the owner's.
 
 ## References
 - Paper docs: https://docs.papermc.io
