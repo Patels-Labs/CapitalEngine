@@ -1,0 +1,22 @@
+name: CapitalDashboard
+main: com.patelheet.capitalengine.dashboard.CapitalDashboardPlugin
+version: ${version}
+api-version: '1.21.11'
+description: Economy history, alerts and a local web page for server owners. Read-only.
+author: Heet Patel
+website: https://patelheet.com
+depend: [CapitalEngine]
+libraries:
+  - com.zaxxer:HikariCP:7.1.0
+  - org.postgresql:postgresql:42.7.14
+
+commands:
+  cdash:
+    description: Economy dashboard for owners and staff
+    usage: /cdash [alerts [ack <id|all>]|plugins|web|reload]
+
+permissions:
+  capitaldash.view: { description: /cdash and /cdash plugins, default: op }
+  capitaldash.alerts: { description: List and acknowledge alerts, and receive live alert lines, default: op }
+  capitaldash.web: { description: Get a one-time login link for the web page, default: op }
+  capitaldash.admin: { description: /cdash reload, default: op }

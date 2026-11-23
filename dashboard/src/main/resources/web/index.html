@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Economy dashboard</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <h1>Economy dashboard</h1>
+  <span id="updated" class="muted"></span>
+</header>
+<main>
+  <section id="login" hidden>
+    <h2>Please log in</h2>
+    <p>Type <code>/cdash web</code> in game (or in the console) and open the link it gives you. Each link works once, for 5 minutes.</p>
+  </section>
+
+  <div id="app" hidden>
+    <section class="cards" id="cards"></section>
+
+    <section>
+      <div class="row"><h2>Money in the world</h2>
+        <select id="range" aria-label="Time range"><option value="1d">1 day</option><option value="7d" selected>7 days</option><option value="30d">30 days</option><option value="90d">90 days</option><option value="365d">1 year</option></select>
+      </div>
+      <div class="chart" id="supply-chart"></div>
+    </section>
+
+    <section class="two">
+      <div><h2>Created and destroyed per day</h2><div class="chart" id="flow-chart"></div></div>
+      <div><h2>Treasury in and out per day</h2><div class="chart" id="treasury-chart"></div></div>
+    </section>
+
+    <section>
+      <div class="row"><h2>Money by plugin</h2>
+        <select id="plugin-range" aria-label="Plugin range"><option value="1d">Today</option><option value="7d" selected>7 days</option><option value="30d">30 days</option></select>
+      </div>
+      <div class="scroll"><table id="plugins"><thead><tr><th>Plugin</th><th>Created</th><th>Destroyed</th><th>Into Treasury</th><th>Out of Treasury</th><th>Net new money</th></tr></thead><tbody></tbody></table></div>
+      <p class="muted">Highlighted rows made more than half of all new money in the range.</p>
+    </section>
+
+    <div id="addons"></div>
+
+    <section>
+      <div class="row"><h2>Alerts</h2>
+        <label class="muted"><input type="checkbox" id="show-acked"> show acknowledged</label>
+        <button id="ack-all" type="button">Ack all</button>
+      </div>
+      <ul id="alerts"></ul>
+    </section>
+  </div>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
