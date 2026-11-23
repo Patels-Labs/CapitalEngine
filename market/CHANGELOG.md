@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/Patels-Labs/CapitalEngine/compare/market-v1.2.1...market-v1.3.0) (2026-11-23)
+
+
+### Features
+
+* **market,trade,bank,sim,repo:** retune defaults from full-economy sim ([#40](https://github.com/Patels-Labs/CapitalEngine/issues/40)) ([6908be0](https://github.com/Patels-Labs/CapitalEngine/commit/6908be051fbe8ea3972b142b16b421bc031e3356))
+
+
+### Bug Fixes
+
+* **market,sim:** clear farm floods and close two item-loss windows ([#38](https://github.com/Patels-Labs/CapitalEngine/issues/38)) ([3f6e9e9](https://github.com/Patels-Labs/CapitalEngine/commit/3f6e9e95dec0cecd35da6cb60d960eb97ccd528d))
+
 ## [1.2.1](https://github.com/patelheet30/CapitalEngine/compare/market-v1.2.0...market-v1.2.1) (2026-10-16)
 
 
