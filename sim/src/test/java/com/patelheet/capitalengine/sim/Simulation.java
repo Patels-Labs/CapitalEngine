@@ -232,9 +232,10 @@ final class Simulation {
             core.clockControl().advanceDays(1);
             drain();
             if (bank != null) {
-                // what interest may be at most: the capped savings at the highest rate the bank allows, and the day's budget
+                // what interest may be at most: each saver's savings up to the cap, at today's rate, and the day's budget
                 long bound = 0;
-                for (Agent a : agents) bound += (long) Math.floor(Math.min(bank.savings(a.id), bankCfg[0]) * (bankCfg[1] / 1e6) / 7) + 1;
+                double perDay = bank.savingsPerDay();
+                for (Agent a : agents) bound += (long) Math.floor(Math.min(bank.savings(a.id), bankCfg[0]) * perDay);
                 long budget = api.monetaryPolicy().flatMap(m -> { var b = m.budget("savings"); return b.isPresent() ? java.util.Optional.of(b.getAsLong()) : java.util.Optional.empty(); }).orElse(bankCfg[2]);
                 get(bank.onDay(api.stats().dayIndex(), false, new BankService.Snapshot(land, online)));
                 drain();
@@ -266,7 +267,7 @@ final class Simulation {
 
     private double num(String key, double def) { return ((Number) sc.config().getOrDefault(key, def)).doubleValue(); }
 
-    /** {interest cap, highest weekly savings rate × 1e6, daily interest budget without a policy, loan term, write-off days}, as the bank reads them. */
+    /** {interest cap, unused, daily interest budget without a policy, loan term, write-off days}, as the bank reads them. */
     private long[] bankLimits() {
         var y = YamlConfiguration.loadConfiguration(new File(server.getPluginManager().getPlugin("CapitalBank").getDataFolder(), "config.yml"));
         return new long[]{api.currency().parse(y.getString("savings.interest-cap")), Math.round(y.getDouble("rates.max-savings-weekly") * 1e6),

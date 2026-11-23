@@ -28,12 +28,12 @@ final class Asserts {
     }
 
     /**
-     * The bank, every day: its own check against the ledger is clean, interest stays within the capped savings at the highest rate and within
+     * The bank, every day: its own check against the ledger is clean, interest stays within each saver's capped savings at today's rate and within
      * the day's budget, and no loan outlives its term plus the write-off days (a loan can never trap a player; at worst borrowing pauses).
      */
     void bank(int day, List<String> problems, long interestPaid, long interestBound, long budget, List<String> trapped) {
         problems.forEach(p -> fail(day, "bank check: " + p));
-        if (interestPaid > interestBound) fail(day, "the bank paid " + interestPaid + " interest, more than capped savings at the highest rate allow (" + interestBound + ")");
+        if (interestPaid > interestBound) fail(day, "the bank paid " + interestPaid + " interest, more than capped savings at today's rate allow (" + interestBound + ")");
         if (interestPaid > budget) fail(day, "the bank paid " + interestPaid + " interest, over the day's budget of " + budget);
         trapped.forEach(t -> fail(day, t));
     }
