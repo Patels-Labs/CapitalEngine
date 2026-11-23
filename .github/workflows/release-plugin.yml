@@ -11,7 +11,7 @@ on:
       module:
         description: Module to build
         type: choice
-        options: [core, market]
+        options: [core, market, bank, dashboard, trade]
         default: core
       tag:
         description: Existing release tag to attach the jar to (empty for a build-only run)
