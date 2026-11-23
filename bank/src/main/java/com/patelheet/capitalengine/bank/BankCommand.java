@@ -64,6 +64,9 @@ final class BankCommand implements CommandExecutor, TabCompleter {
 
     // ---- /bank admin -------------------------------------------------------------------------------------------
 
+    /** Replies from the worker hop back to the main thread first. */
+    private void reply(CommandSender s, net.kyori.adventure.text.Component c) { plugin.getServer().getGlobalRegionScheduler().run(plugin, t -> s.sendMessage(c)); }
+
     private void admin(CommandSender s, String[] x) {
         if (!s.hasPermission("capitalbank.admin")) { s.sendMessage(msg.get("no-permission")); return; }
         String sub = x.length < 2 ? "" : x[1].toLowerCase();
@@ -71,21 +74,21 @@ final class BankCommand implements CommandExecutor, TabCompleter {
         if (x.length >= 3 && target == null) { s.sendMessage(msg.get("unknown-player", "name", x[2])); return; }
         switch (sub) {
             case "loans" -> svc.run(() -> target == null ? svc.store.loans("ACTIVE", "OVERDUE", "PENDING") : svc.store.loansOf(target)).thenAccept(list -> {
-                if (list.isEmpty()) { s.sendMessage(msg.get("admin-no-loans")); return; }
-                for (var l : list) s.sendMessage(msg.get("admin-loan-line", "id", l.id(), "name", svc.wallet(l.uuid()).name(), "status", l.status(),
+                if (list.isEmpty()) { reply(s, msg.get("admin-no-loans")); return; }
+                for (var l : list) reply(s, msg.get("admin-loan-line", "id", l.id(), "name", svc.wallet(l.uuid()).name(), "status", l.status(),
                         "principal", svc.coins(l.principal()), "left", svc.coins(l.left()), "behind", svc.coins(l.arrears())));
             });
             case "forgive" -> {
-                if (target == null) { s.sendMessage(msg.get("admin-usage")); return; }
-                svc.forgive(target).thenAccept(ok -> s.sendMessage(msg.get(ok ? "admin-forgiven" : "admin-no-loans")));
+                if (target == null) { reply(s, msg.get("admin-usage")); return; }
+                svc.forgive(target).thenAccept(ok -> reply(s, msg.get(ok ? "admin-forgiven" : "admin-no-loans")));
             }
             case "unfreeze" -> {
-                if (target == null) { s.sendMessage(msg.get("admin-usage")); return; }
-                svc.unfreeze(target).thenAccept(n -> s.sendMessage(msg.get("admin-unfrozen", "amount", svc.coins(n))));
+                if (target == null) { reply(s, msg.get("admin-usage")); return; }
+                svc.unfreeze(target).thenAccept(n -> reply(s, msg.get("admin-unfrozen", "amount", svc.coins(n))));
             }
             case "check" -> svc.check().thenAccept(problems -> {
-                if (problems.isEmpty()) s.sendMessage(msg.get("admin-check-ok"));
-                else problems.forEach(pr -> s.sendMessage(msg.get("admin-check-bad", "problem", pr)));
+                if (problems.isEmpty()) reply(s, msg.get("admin-check-ok"));
+                else problems.forEach(pr -> reply(s, msg.get("admin-check-bad", "problem", pr)));
             });
             case "reload" -> { msg.reload(); s.sendMessage(msg.get("admin-reloaded")); }
             default -> s.sendMessage(msg.get("admin-usage"));

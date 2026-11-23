@@ -44,6 +44,14 @@ class BankMathTest {
         assertTrue(odd.instalment() * odd.days() >= odd.total());
     }
 
+    @Test void interestIsNeverACoinShortFromFloatingPointRounding() {
+        for (long coins = 1; coins <= 5_000; coins++) {
+            long p = coins * 100;
+            assertEquals(p / 20, BankMath.terms(p, 0.05 / 7, 7).interest(), "5% a week on " + coins + " coins");
+            assertEquals(p / 50, BankMath.owed(p, Long.MAX_VALUE, 0.14 / 7), "2% a day on " + coins + " coins");
+        }
+    }
+
     @Test void paymentsSplitWithoutLosingACoin() {
         long p = 50_000, i = 2_500;
         long paidP = 0, paidI = 0, arrears = 0;

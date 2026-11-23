@@ -101,14 +101,14 @@ com.patelheet.capitalengine.bank
 - **Terms:**
   - The player picks an amount up to their limit.
   - The term is `loans.term-days` (7). Interest is **flat**: `interest = principal × loanPerDay × termDays`.
-  - The instalment is `(principal + interest) / termDays`.
+  - The instalment is `ceil((principal + interest) / termDays)`; the last day takes only what is left, so no coin is lost to rounding.
   - The confirmation screen says exactly that: "Borrow 500 coins, pay back 75 coins a day for 7 days (525 total). ✔ / ✖".
 - **Payout:** `transaction("bank.loan_payout").issue(player, principal).reference("loan:<id>:payout")`. **The loan creates the money,** just like real bank lending.
 - **Bank-wide cap:** before paying out, the bank checks that Σ outstanding principal + the new principal ≤ `loans.loan-book-max`. If not: "The bank has lent out all it can today, try tomorrow!"
 - **Daily collection** (at each Day event that isn't a catch-up), for each active loan:
   ```
   take      = min(instalment + arrears, player wallet)                  # never more than they have
-  principal = take × principal/(principal+interest)   ;   interestPart = take − principal
+  principal = floor(take × principalLeft/(principalLeft+interestLeft))   ;   interestPart = take − principal   # by what is still owed, so the last payment clears both exactly
   tx: destroy(player, principal) + move(player → Treasury, interestPart) , reference "loan:<id>:day:<day>"
   ```
   - The principal part is **destroyed**, so the money the loan created goes away again. The interest goes to the Treasury.

@@ -22,7 +22,7 @@ public final class BankMath {
 
     /** Interest owed today on one savings balance: {@code floor(min(balance, cap) × perDay)}. */
     public static long owed(long balance, long cap, double perDay) {
-        return (long) Math.floor(Math.max(0, Math.min(balance, cap)) * perDay);
+        return floor(Math.max(0, Math.min(balance, cap)) * perDay);
     }
 
     /** What everyone is actually paid when the budget is short: each share scaled down by the same factor, rounded down. Never more than {@code budget} in total. */
@@ -49,7 +49,7 @@ public final class BankMath {
 
     /** {@code interest = floor(principal × perDay × days)}, {@code instalment = ceil(total / days)}. */
     public static Terms terms(long principal, double perDay, int days) {
-        long interest = (long) Math.floor(principal * perDay * days);
+        long interest = floor(principal * perDay * days);
         long total = principal + interest;
         return new Terms(principal, interest, Math.ceilDiv(total, days), days);
     }
@@ -71,7 +71,7 @@ public final class BankMath {
 
     /** The next credit limit after a loan repaid with no missed days: {@code limit × (1 + growth)}, up to {@code max}. */
     public static long grow(long limit, double growth, long max) {
-        return Math.min(max, (long) Math.floor(limit * (1 + growth)));
+        return Math.min(max, floor(limit * (1 + growth)));
     }
 
     // ---- land upkeep (§5.4) ------------------------------------------------------------------------------------
@@ -84,6 +84,9 @@ public final class BankMath {
 
     /** Land is frozen once more than {@code days} days' upkeep is owed (or anything is owed when the land costs nothing a day). */
     public static boolean frozen(long due, long dailyCharge, int days) { return due > 0 && due > dailyCharge * days; }
+
+    /** Rounds down, but a product that is a whole number in exact arithmetic (500 × 5%) never loses a unit to floating-point error. */
+    static long floor(double x) { return (long) Math.floor(x + 1e-9); }
 
     /** {@code a × b / c}, rounded down, without overflow. */
     static long mulDiv(long a, long b, long c) {

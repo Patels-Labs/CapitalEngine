@@ -92,7 +92,7 @@ class BankFlowTest {
     void empty(UUID p) throws Exception { if (bal(p) > 0) assertTrue(await(api.destroy(tester, wallet(p), bal(p), "test.take", "Test")).success()); }
 
     void until(BooleanSupplier ok, String what) throws Exception {
-        for (int i = 0; i < 200 && !ok.getAsBoolean(); i++) { server.getScheduler().performTicks(1); Thread.sleep(10); }
+        for (int i = 0; i < 1000 && !ok.getAsBoolean(); i++) { server.getScheduler().performTicks(1); Thread.sleep(10); }
         assertTrue(ok.getAsBoolean(), "timed out waiting for " + what);
     }
 

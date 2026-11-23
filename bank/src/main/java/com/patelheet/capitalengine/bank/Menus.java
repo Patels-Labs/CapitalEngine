@@ -67,6 +67,7 @@ final class Menus {
                 Menu m = withNav(menu("menu-loan"), p);
                 m.set(4, Menu.icon(Material.PAPER, msg.get("btn-loan-info", "left", a.coins(l.left()), "instalment", a.coins(l.instalment())),
                         l.arrears() > 0 ? msg.get("lore-loan-behind", "amount", a.coins(l.arrears())) : msg.get("lore-loan-ok")));
+                if (l.arrears() > 0) a.say(p, "loan-behind", "amount", a.coins(l.arrears()));   // in chat too: Bedrock may not show lore
                 m.set(11, Menu.icon(Material.EMERALD_BLOCK, msg.get("btn-repay-all")), () -> a.startRepay(p, 0, screen));
                 m.set(15, Menu.icon(Material.EMERALD, msg.get("btn-repay-other")), () -> a.askAmount(p, "btn-repay-other", n -> a.startRepay(p, n, a.chat)));
                 m.open(p);
@@ -75,11 +76,11 @@ final class Menus {
             a.then(p, svc.offer(id, CapitalBankPlugin.playedMinutes(p)), o -> {
                 Menu m = withNav(menu("menu-loan"), p);
                 if (o.reason() != null) {
-                    m.set(13, Menu.icon(Material.BARRIER, msg.get("btn-loan-no"), msg.get("loan-" + o.reason(), "hours", svc.minPlayMinutes / 60)));
+                    m.set(13, Menu.icon(Material.BARRIER, msg.get("loan-" + o.reason(), "hours", svc.minPlayMinutes / 60)));   // the reason is the name, so Bedrock shows it
                     m.open(p);
                     return;
                 }
-                m.set(4, Menu.icon(Material.PAPER, msg.get("btn-loan-offer", "limit", a.coins(o.limit())), msg.get("lore-loan-offer", "rate", Actions.pct(o.weeklyRate()), "days", o.termDays())));
+                m.set(4, Menu.icon(Material.PAPER, msg.get("btn-loan-offer", "limit", a.coins(o.limit()), "rate", Actions.pct(o.weeklyRate()), "days", o.termDays())));
                 long[] amounts = {o.limit() / 4, o.limit() / 2, o.limit()};
                 for (int i = 0; i < 3; i++) {
                     long n = amounts[i] / 100 * 100;   // whole coins
