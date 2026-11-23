@@ -48,4 +48,4 @@ Needs JDK 21 or newer. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a p
 
 CapitalEngine is free software under the [GNU GPL v3.0 only](LICENSE), with the [CapitalEngine Add-on Exception](ADDON-EXCEPTION.txt): plugins that use CapitalEngine only through its API can be released under any licence. Changes to CapitalEngine itself stay under the GPL.
 
-The CapitalEngine name, logo and official icons are not covered by the GPL; a brand policy will ship with the brand kit.
+The licence for the CapitalEngine name, logo and icons is still being decided and will ship with the brand kit.
