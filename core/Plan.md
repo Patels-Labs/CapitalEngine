@@ -359,7 +359,7 @@ Status after the Phase 0 build (automated = `./gradlew :core:test`, 57 tests):
 - [x] `/money`, `/pay` (with confirmation) and starter coins work. All player text is plain-language. *(`PlayerFlowTest`, `MessagesTest`; still to eyeball on a real client, Java and Bedrock.)*
 - [x] `/ce import Essentials` moves balances exactly. A second run is a no-op. *(`PlayerFlowTest` with a fake provider; try it against real EssentialsX.)*
 - [x] Killing the server mid-load and restarting gives a passing `/ce check`. *(`CrashTest` SIGKILLs a heavily-writing process; `PersistenceTest` covers spill and replay.)*
-- [ ] The API jar is published, and the api §5.8 example add-on runs against core. *(Jar, Javadoc and POM build with the licence inside; the example runs in `EconomicClockTest`; publishing to the owner's Maven repo needs the repo URL and credentials.)*
+- [x] The API jar is published, and the api §5.8 example add-on runs against core. *(`com.patelheet:capitalengine-api:1.0.0` is on the public Maven repo at `https://patelheet30.github.io/capitalengine-api/m2`; the example runs in `EconomicClockTest`.)*
 
 ## 12. Open questions
 1. ~~Group and package ID~~ **Decided:** `com.patelheet.capitalengine.core`.

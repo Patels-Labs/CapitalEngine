@@ -15,7 +15,7 @@ The project is a **monorepo of separate plugins:**
 The full design is in [Plan.md](Plan.md).
 
 ## Status
-**Phase 0 (`api` + `core`) is built and tested** (`./gradlew build`); its real-server and Bedrock smoke tests are still open (see the "Done when" list in [core/Plan.md](core/Plan.md)). **Phase 1 (`market`) is built and tested** (see "Build status" in [market/Plan.md](market/Plan.md); what is left is in [BACKLOG.md](BACKLOG.md), and `sim` covers the market only so far ([sim/RESULTS.md](sim/RESULTS.md))). Bank, Dashboard and Trade have only their `Plan.md` files so far.
+**Phase 0 (`api` + `core`) is built and tested** (`./gradlew build`); it has been smoke-tested on real Paper 1.21.11 and 26.2, and the API 1.0.0 jar is published. Still open: a Bedrock join through Geyser, a server with only the original Vault, real EssentialsX and Jobs, and MySQL (see the "Done when" list in [core/Plan.md](core/Plan.md)). **Phase 1 (`market`) is built and tested** (see "Build status" in [market/Plan.md](market/Plan.md); what is left is in [BACKLOG.md](BACKLOG.md), and `sim` covers the market only so far ([sim/RESULTS.md](sim/RESULTS.md))). Bank, Dashboard and Trade have only their `Plan.md` files so far.
 
 Build order (root [Plan.md §15](Plan.md)):
 - **Phase 0:** `api` + `core`
