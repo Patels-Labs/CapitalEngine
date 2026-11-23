@@ -1,0 +1,40 @@
+# CapitalBank. Coin amounts are written like in CapitalEngine ("1.5", "500"). Changes need a restart.
+
+storage:
+  type: sqlite            # sqlite | mysql | mariadb | postgres
+  file: bank.db           # sqlite only
+  # host: localhost       # mysql / mariadb / postgres
+  # port: 3306
+  # database: capitalbank
+  # user: ""
+  # password: ""
+  # prefix: bank_         # table name prefix for mysql/postgres, so a database can be shared
+  # pool-size: 4
+
+# Used when no plugin (such as CapitalMarket) publishes rates. The max values always apply, as your safety net.
+rates:
+  savings-weekly: 0.02
+  loan-weekly: 0.05
+  max-savings-weekly: 0.05
+  max-loan-weekly: 0.15
+
+savings:
+  interest-cap: 10000           # only this much of each player's savings earns interest
+  savings-daily-budget: 2000    # most interest paid in a day (CapitalMarket's autopilot sets this when installed)
+
+loans:
+  start-limit: 500
+  growth: 0.5                   # the limit grows by half after each loan repaid with no missed days
+  max-limit: 5000
+  term-days: 7
+  loan-book-max: 200000         # most coins lent out at once, across all players
+  min-playtime-hours: 2
+  write-off-days: 28            # days behind before a loan is written off
+  cooldown-days: 14             # no borrowing for this long after a write-off
+
+upkeep:
+  enabled: true                 # needs GriefPrevention, Lands or WorldGuard
+  free-blocks: 10000            # blocks² of land each player owns free (100×100)
+  per-100-blocks: 1             # coins a day for every 100 blocks² above that
+  freeze-after-days: 3          # land freezes once more than this many days' upkeep is owed
+  pause-after-offline-days: 14  # players away this long build up no upkeep

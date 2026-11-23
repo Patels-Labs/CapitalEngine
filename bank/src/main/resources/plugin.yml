@@ -1,0 +1,23 @@
+name: CapitalBank
+main: com.patelheet.capitalengine.bank.CapitalBankPlugin
+version: ${version}
+api-version: '1.21.11'
+description: Savings that earn interest, one simple loan, and land upkeep.
+author: Heet Patel
+website: https://patelheet.com
+depend: [CapitalEngine]
+softdepend: [GriefPrevention, Lands, WorldGuard, PlaceholderAPI, floodgate]
+libraries:
+  - com.zaxxer:HikariCP:7.1.0
+  - org.postgresql:postgresql:42.7.14
+
+commands:
+  bank:
+    description: Your savings, loan and land upkeep
+    usage: /bank [deposit|withdraw|loan|repay|upkeep|yes|help]
+    permission: capitalbank.use
+
+permissions:
+  capitalbank.use: { description: Use /bank, savings and land upkeep, default: true }
+  capitalbank.loans: { description: Borrow and repay loans, default: true }
+  capitalbank.admin: { description: /bank admin, default: op }

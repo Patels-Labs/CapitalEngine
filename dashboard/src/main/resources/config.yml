@@ -1,0 +1,36 @@
+# CapitalDashboard. Read-only: it shows what the economy is doing and never moves money or changes settings.
+
+storage:
+  type: sqlite            # sqlite | mysql | mariadb | postgres
+  file: dashboard.db      # sqlite only
+  # host: localhost       # mysql / mariadb / postgres
+  # port: 3306
+  # database: capitaldashboard
+  # user: ""
+  # password: ""
+  # prefix: dash_         # table name prefix for mysql/postgres, so a database can be shared
+  # pool-size: 4
+
+snapshot-minutes: 5       # how often the numbers are recorded (kept 7 days in full, then hourly for 90 days, then daily forever)
+
+alerts:
+  dedupe-minutes: 60      # the same alert again within this time only counts up instead of being sent again
+  staff-min-severity: WARN          # INFO | WARN | CRITICAL: lowest level shown in game to players with capitaldash.alerts
+  discord:
+    webhook: ""                     # a Discord webhook URL, or empty for none
+    min-severity: WARN
+  rules:
+    issuance-spike-x: 3.0           # warn when today's new money is more than this many times the 7-day daily average
+    printer-share: 0.5              # warn when one plugin made more than this share of today's new money...
+    printer-min-coins: 1000         # ...and more than this many coins
+    supply-drop: 0.20               # warn when the money in the world fell by more than this share in 7 days
+
+web:
+  enabled: false
+  bind: 127.0.0.1         # 0.0.0.0 makes it reachable from other machines: put it behind HTTPS (a reverse proxy) if you do
+  port: 8765
+  public-url: ""          # e.g. https://dash.example.com, used in the /cdash web login link
+
+metrics:                  # Prometheus: GET /metrics with the header "Authorization: Bearer <token>"
+  enabled: false
+  token: ""               # generated the first time the server starts with metrics enabled

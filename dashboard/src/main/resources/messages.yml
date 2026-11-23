@@ -1,0 +1,81 @@
+# Every owner-facing string. MiniMessage formatting. Chat lines carry the prefix.
+prefix: "<gold>[Economy]</gold> "
+
+# ---- /cdash summary -----------------------------------------------------------------------------------------------
+summary-title: "<gold>━━ Economy today ━━</gold>"
+summary-supply: "<hover:show_text:'Every coin that exists: held by players, plugins and the Treasury'>Money in the world: <white><amount></white><change></hover>"
+summary-change: " <gray>(<arrow><percent>% this week)</gray>"
+summary-flows: "<hover:show_text:'New money is created by plugins and the server; destroyed money is gone for good'>Created today: <white><issued></white> · Destroyed today: <white><destroyed></white> · Treasury: <white><treasury></white></hover>"
+summary-players: "Active players today: <white><count></white>"
+summary-top: "<hover:show_text:'The plugins that created the most new money today'>Most new money from: <list></hover>"
+summary-top-item: "<white><plugin></white> <amount>"
+summary-top-none: "Most new money from: nobody yet today"
+summary-addon: "<name>: <list>"
+summary-addon-item: "<label> <white><value></white>"
+summary-alerts: "Alerts: <yellow><count> open</yellow> <click:run_command:'/cdash alerts'><aqua>[/cdash alerts]</aqua></click>"
+summary-alerts-none: "Alerts: <green>none open</green>"
+summary-waiting: "<gray>The first reading is still being taken. Try again in a moment.</gray>"
+
+# ---- /cdash alerts --------------------------------------------------------------------------------------------------
+alerts-title: "<gold>━━ Open alerts (<count>) ━━</gold>"
+alerts-none: "<green>There are no open alerts.</green>"
+alerts-ack-button: "<aqua>[Ack]</aqua>"
+alerts-line: "<gray>#<id></gray> <severity> <white><source></white>: <message> <gray>(×<hits>, <ago>)</gray> <ack> <gray>or type /cdash alerts ack <id></gray>"
+alerts-more: "<gray>…and <count> more. Open the web page (/cdash web) for the full list.</gray>"
+alerts-ack-all-hint: "<gray>Type /cdash alerts ack all to acknowledge every open alert.</gray>"
+alerts-acked: "<green>Acknowledged <count> alert(s). They stay in the history.</green>"
+alerts-ack-none: "<yellow>No open alert matches that.</yellow>"
+severity-INFO: "<aqua>INFO</aqua>"
+severity-WARN: "<yellow>WARN</yellow>"
+severity-CRITICAL: "<red>CRITICAL</red>"
+ago-minutes: "<n> min ago"
+ago-hours: "<n> h ago"
+ago-days: "<n> days ago"
+
+# ---- /cdash plugins -------------------------------------------------------------------------------------------------
+plugins-title: "<gold>━━ Money by plugin ━━</gold> <gray>(today · last 7 days)</gray>"
+plugins-line: "<white><plugin></white>: created <issued> · destroyed <destroyed> · Treasury in <tin> / out <tout> · <b>net <net></b> <gray>(7 days: net <net7>)</gray>"
+plugins-none: "<gray>No plugin has moved money yet today.</gray>"
+
+# ---- /cdash web -----------------------------------------------------------------------------------------------------
+web-link: "<green>Your login link (works once, for 5 minutes):</green> <url>"
+web-link-plain: "<gray>If the link cannot be clicked, copy this address into a browser: <url></gray>"
+web-disabled: "<yellow>The web page is turned off. Set web.enabled: true in CapitalDashboard's config.yml and run /cdash reload.</yellow>"
+
+# ---- other ----------------------------------------------------------------------------------------------------------
+reloaded: "<green>CapitalDashboard reloaded.</green>"
+no-permission: "<red>You do not have permission to do that.</red>"
+usage: "<gray>Usage: /cdash [alerts [ack <id|all>]|plugins|web|reload]</gray>"
+error: "<red>That did not work: <reason></red>"
+
+# ---- live alert line for staff, and Discord -------------------------------------------------------------------------
+alert-line: "<gold>⚠ [Economy]</gold> <source>: <message> <gray>— /cdash alerts</gray>"
+discord-title: "⚠ [Economy] <source>"
+
+# ---- alert messages (stored and sent as plain text) -----------------------------------------------------------------
+rule-issuance_spike: "<today> of new money was created today, more than <x> times the usual <usual> a day."
+rule-plugin_printer: "<plugin> created <amount> of new money today (<share>% of all new money today)."
+rule-unknown_plugin: "<plugin> has started moving money. Check its limits with /ce policy if you did not expect it."
+rule-treasury_empty: "The Treasury has been empty for a whole day, so every server payment is new money."
+rule-supply_drop: "The money in the world fell from <before> to <now> in a week (down <percent>%)."
+audit-failed: "The nightly ledger self-check found <count> problem(s): <first>"
+limit-ISSUE: "<plugin> reached its daily limit for creating money (asked for <requested>, <remaining> left)."
+limit-TREASURY: "<plugin> reached its daily Treasury limit (asked for <requested>, <remaining> left)."
+limit-DENIED: "<plugin> tried to move money but is not allowed to (asked for <requested>)."
+
+# ---- names of core's numbers on the web page and in /metrics' catalogue ---------------------------------------------
+label-moneySupply: "Money in the world"
+label-activeMoneySupply: "Money with active players"
+label-treasuryBalance: "Treasury"
+label-issuedToday: "Created today"
+label-destroyedToday: "Destroyed today"
+label-treasuryInToday: "Into the Treasury today"
+label-treasuryOutToday: "Out of the Treasury today"
+label-activePlayersToday: "Active players today"
+label-activeMinutesToday: "Active minutes today"
+label-avgActivePlayers7d: "Active players (7-day average)"
+label-flow-issued: "<plugin>: created today"
+label-flow-destroyed: "<plugin>: destroyed today"
+label-flow-treasuryIn: "<plugin>: into the Treasury today"
+label-flow-treasuryOut: "<plugin>: out of the Treasury today"
+label-flow-net: "<plugin>: net new money today"
