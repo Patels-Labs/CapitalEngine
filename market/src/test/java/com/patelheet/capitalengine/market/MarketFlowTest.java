@@ -235,6 +235,97 @@ class MarketFlowTest {
         svc.onDay(api.stats(), api.stats().dayIndex(), false);
         await(svc.run(() -> null));
         assertEquals(jobs, await(svc.jobs.open()).stream().filter(j -> "railway".equals(j.project())).count(), "projects aren't posted twice");
+
+        // delivering to "the town needs" also uses up as many of the server's own extra items
+        var town = open.stream().filter(j -> j.project() == null && j.poster() == null && "wheat".equals(j.item())).findFirst().orElseThrow();
+        var p = svc.policy;   // plenty of jobs budget, so the budget isn't what stops a delivery
+        svc.policy = new com.patelheet.capitalengine.market.autopilot.Autopilot.State(p.week(), p.rate(), p.savings(), 10_000_000, p.buyer(), p.spread(), p.index(), p.inflation(), p.newMoney());
+        await(svc.deposit(mia, "wheat", 100));
+        long stock = svc.store.stock("wheat");
+        var d = await(svc.jobs.deliver(mia, town.id(), 100));
+        assertTrue(d.qty() > 0, String.valueOf(d.error()));
+        assertEquals(stock - d.qty(), svc.store.stock("wheat"));
+        svc.store.setStock("wheat", 650);   // only 10 above the 640 target now
+        await(svc.deposit(mia, "wheat", 50));
+        var more = await(svc.jobs.deliver(mia, town.id(), 50));
+        assertTrue(more.qty() > 10, String.valueOf(more.error()));
+        assertEquals(640, svc.store.stock("wheat"), "never below the target");
+    }
+
+    /** Waits for a worker task that itself waits on a region task (project chests), ticking the server meanwhile. */
+    <T> T ticking(CompletableFuture<T> f) throws Exception {
+        for (int i = 0; i < 200 && !f.isDone(); i++) { server.getScheduler().performTicks(1); Thread.sleep(5); }
+        return await(f);
+    }
+
+    @Test void projectDeliveriesReachTheChestEvenAfterACrash() throws Exception {
+        var world = samP.getWorld();
+        var chest = world.getBlockAt(5, 60, 5);
+        chest.setType(Material.CHEST);
+        Files.writeString(new java.io.File(market.getDataFolder(), "projects.yml").toPath(),
+                "railway:\n  needs: { iron_ingot: 500 }\n  deliver-to: chest@" + world.getName() + ",5,60,5\n");
+        await(svc.replan());
+        var job = await(svc.jobs.open()).stream().filter(j -> "railway".equals(j.project())).findFirst().orElseThrow();
+        await(svc.deposit(mia, "iron_ingot", 10));
+        var d = ticking(svc.jobs.deliver(mia, job.id(), 10));
+        assertEquals(10, d.qty(), String.valueOf(d.error()));
+        settle();
+        var inv = ((org.bukkit.block.Container) chest.getState()).getInventory();
+        assertEquals(10, inv.all(Material.IRON_INGOT).values().stream().mapToInt(ItemStack::getAmount).sum());
+        assertTrue(svc.store.deliveries("CHEST").isEmpty(), "done once the items are in");
+
+        // a crash after the pay, before the items reached the chest: they are sent again on start
+        await(svc.deposit(mia, "iron_ingot", 4));
+        long id = await(svc.run(() -> svc.store.insertDelivery(job.id(), mia, 4, 4 * job.pay(), svc.day(), true)));
+        await(svc.run(() -> { svc.store.finishDelivery(id, job.id(), mia, 4, svc.targetStock, true); return null; }));
+        assertEquals(1, svc.store.deliveries("CHEST").size());
+        await(svc.recover());
+        settle();
+        inv = ((org.bukkit.block.Container) chest.getState()).getInventory();
+        assertEquals(14, inv.all(Material.IRON_INGOT).values().stream().mapToInt(ItemStack::getAmount).sum());
+        assertTrue(svc.store.deliveries("CHEST").isEmpty());
+        assertEquals(0, await(svc.free(mia, "iron_ingot")), "the delivered items left the Stash once");
+    }
+
+    @Test void stashMovesAreWrittenBeforeTheInventoryChanges() throws Exception {
+        var a = market.actions();
+        a.stalls = new Stalls(svc, market.menus()) { @Override public boolean canWithdraw(org.bukkit.entity.Player p) { return true; } };
+        settle();
+        // deposit: the player drops 4 of the 10 before the Stash answers, so only 6 are recorded
+        samP.getInventory().clear();
+        samP.getInventory().addItem(new ItemStack(Material.IRON_INGOT, 10));
+        var done = new java.util.concurrent.atomic.AtomicBoolean();
+        a.deposit(samP, "iron_ingot", 10, () -> done.set(true));
+        samP.getInventory().removeItem(new ItemStack(Material.IRON_INGOT, 4));
+        settle();
+        assertTrue(done.get());
+        assertArrayEquals(new int[]{6, 0}, await(svc.stash(sam)).get("iron_ingot"));
+        assertEquals(0, a.count(samP, "iron_ingot"));
+
+        // withdraw into a full inventory: nothing is given, so nothing leaves the Stash
+        for (int i = 0; i < samP.getInventory().getSize(); i++) samP.getInventory().setItem(i, new ItemStack(Material.DIRT, 64));
+        a.withdraw(samP, "iron_ingot", 6, () -> { });
+        settle();
+        assertArrayEquals(new int[]{6, 0}, await(svc.stash(sam)).get("iron_ingot"));
+        samP.getInventory().clear();
+        a.withdraw(samP, "iron_ingot", 6, () -> { });
+        settle();
+        assertEquals(6, a.count(samP, "iron_ingot"));
+        assertNull(await(svc.stash(sam)).get("iron_ingot"));
+
+        // a crash between the Stash write and the inventory: the items stay in the Stash (held, then freed on start)
+        assertTrue(await(svc.holdIn(sam, "gold_ingot", 5)));
+        assertEquals(0, await(svc.free(sam, "gold_ingot")), "held items can't be sold yet");
+        await(svc.recover());
+        assertEquals(5, await(svc.free(sam, "gold_ingot")));
+
+        // logging off mid-move: the 3 diamonds end up in the bag or the Stash, never both and never neither
+        samP.getInventory().addItem(new ItemStack(Material.DIAMOND, 3));
+        a.deposit(samP, "diamond", 3, () -> { });
+        samP.disconnect();
+        settle();
+        await(svc.recover());
+        assertEquals(3, a.count(samP, "diamond") + await(svc.stash(sam)).getOrDefault("diamond", new int[]{0, 0})[0]);
     }
 
     @Test void tutorialPaysEachStepOnceAndInOrder() throws Exception {

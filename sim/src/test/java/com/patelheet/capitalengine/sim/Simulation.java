@@ -37,7 +37,7 @@ final class Simulation {
     /** Columns of daily.csv, in order. */
     static final List<String> COLUMNS = List.of("day", "money_supply", "active_money", "treasury", "issued", "destroyed", "treasury_in", "treasury_out",
             "active_players", "price_index", "weekly_inflation", "savings_rate_week", "spread", "player_trade_share", "stock_value", "new_money_policy",
-            "buyer_budget", "jobs_budget", "gini", "median_balance", "p90_balance", "unmet_needs", "iron_ask", "wheat_ask");
+            "buyer_budget", "jobs_budget", "gini", "median_balance", "p90_balance", "unmet_needs", "iron_ask", "wheat_ask", "wheat_stock");
 
     record Result(Scenario scenario, List<double[]> rows, List<String> failures, String csv, Map<String, Integer> whyUnmet, List<String> items) {
         boolean passed() { return failures.isEmpty(); }
@@ -218,7 +218,7 @@ final class Simulation {
                 ind.getOrDefault("mm_spread", 0.0), ind.getOrDefault("player_trade_share", 0.0), ind.getOrDefault("server_stock_value", 0.0),
                 pol == null ? 0 : pol.newMoney(), pol == null ? 0 : pol.buyer(), pol == null ? 0 : pol.jobs(), gini(wallets),
                 wallets.length == 0 ? 0 : wallets[wallets.length / 2], wallets.length == 0 ? 0 : wallets[(int) Math.min(wallets.length - 1, wallets.length * 0.9)],
-                tried == 0 ? 0 : 1 - (double) met / tried, iron == null ? 0 : iron.ask(), wheat == null ? 0 : wheat.ask()};
+                tried == 0 ? 0 : 1 - (double) met / tried, iron == null ? 0 : iron.ask(), wheat == null ? 0 : wheat.ask(), wheat == null ? 0 : wheat.stock()};
     }
 
     private static <T> T get2(java.util.concurrent.CompletableFuture<T> f) { try { return get(f); } catch (Exception e) { throw new IllegalStateException(e); } }

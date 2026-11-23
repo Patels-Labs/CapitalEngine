@@ -126,7 +126,7 @@ A delivery job asks for a number of items at a price per item.
 - You are **paid immediately** for each item delivered.
 - Jobs are posted by:
   - **players**: the items you deliver go to the poster's Stash. Their coins are held safely, so you will always be paid.
-  - **the server**: for community projects, or for items the town has plenty of. Server jobs pay a little more than the market's sell price, and the items are used up.
+  - **the server**: for community projects, or for items the town has more of than it needs. These jobs are posted by **The Town**. Server jobs pay a little more than the market's sell price, and the items are used up. For every item you bring to a job for items the town has too many of, it also uses up one of the server's own spare items, so that item's price recovers sooner.
 - Server jobs have a daily payment budget. If it runs out, you will be told they resume tomorrow.
 - Some projects collect items in a **project chest**. If it is full, deliveries wait until there is room.
 
